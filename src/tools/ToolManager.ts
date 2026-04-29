@@ -4,13 +4,15 @@ import { generateId } from '../stores/useCanvasStore'
 export function createShape(
   tool: ToolType,
   startPoint: Point,
-  style: ShapeStyle
+  style: ShapeStyle,
+  userId?: string
 ): Shape {
   return {
     id: generateId(),
     type: tool,
     points: [startPoint.x, startPoint.y],
     style: { ...style },
+    userId,
   }
 }
 

@@ -56,9 +56,9 @@ export function WhiteboardCanvas() {
       return
     }
 
-    const shape = createShape(activeTool, pos, style)
+    const shape = createShape(activeTool, pos, style, userId || undefined)
     setDrawingShape(shape)
-  }, [activeTool, style, getPointerPos])
+  }, [activeTool, style, getPointerPos, userId])
 
   const handleMouseMove = useCallback(() => {
     // Update drawing preview
@@ -97,6 +97,7 @@ export function WhiteboardCanvas() {
         points: [textPos.x, textPos.y],
         style: { ...style },
         text: textValue,
+        userId: userId || undefined,
       }
       addShape(shape)
       syncSend('draw', shape)
@@ -168,7 +169,13 @@ export function WhiteboardCanvas() {
       }
       if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
         e.preventDefault()
-        useCanvasStore.getState().undo()
+        const uid = useUserStore.getState().userId
+        if (uid) {
+          const removedId = useCanvasStore.getState().undoOwn(uid)
+          if (removedId) {
+            syncSend('delete', undefined, removedId)
+          }
+        }
       }
     }
     window.addEventListener('keydown', handleKey)

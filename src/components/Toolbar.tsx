@@ -14,8 +14,19 @@ const tools: { type: ToolType; label: string; icon: string }[] = [
 
 export function Toolbar() {
   const { activeTool, style, setTool, setColor, setStrokeWidth } = useToolStore()
-  const { undo, clearCanvas, shapes } = useCanvasStore()
-  const { roomId } = useUserStore()
+  const { shapes, clearCanvas } = useCanvasStore()
+  const { roomId, userId } = useUserStore()
+
+  const ownShapeCount = shapes.filter((s) => s.userId === userId).length
+
+  const handleUndo = () => {
+    if (!userId) return
+    const removedId = useCanvasStore.getState().undoOwn(userId)
+    if (removedId) {
+      const sm = getSyncManager()
+      if (sm) sm.send({ type: 'operation', action: 'delete', shapeId: removedId })
+    }
+  }
 
   const handleClear = () => {
     clearCanvas()
@@ -84,8 +95,8 @@ export function Toolbar() {
 
       {/* Actions */}
       <button
-        onClick={undo}
-        disabled={useCanvasStore.getState().history.length === 0}
+        onClick={handleUndo}
+        disabled={ownShapeCount === 0}
         className="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
       >
         ↩ 撤销
