@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { Toolbar } from './components/Toolbar'
+import { Sidebar } from './components/Sidebar'
 import { WhiteboardCanvas } from './components/WhiteboardCanvas'
 import { RoomModal } from './components/RoomModal'
-import { UserList } from './components/UserList'
 import { RemoteCursors } from './components/RemoteCursor'
 import { useUserStore } from './stores/useUserStore'
 import { createSyncManager } from './sync/SyncManager'
@@ -34,9 +33,8 @@ export default function App() {
 
       {inRoom && (
         <>
-          <Toolbar />
+          <Sidebar />
           <WhiteboardCanvas />
-          <UserList />
           <RemoteCursors />
         </>
       )}
