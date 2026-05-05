@@ -10,6 +10,11 @@ const tools: { type: ToolType; label: string; icon: string }[] = [
   { type: 'circle', label: '圆形', icon: '⭕' },
   { type: 'arrow', label: '箭头', icon: '➡️' },
   { type: 'text', label: '文本', icon: '🔤' },
+  { type: 'line', label: '直线', icon: '📏' },
+  { type: 'triangle', label: '三角', icon: '🔺' },
+  { type: 'diamond', label: '菱形', icon: '🔷' },
+  { type: 'pentagon', label: '五边', icon: '⬠' },
+  { type: 'star', label: '星形', icon: '⭐' },
 ]
 
 export function Toolbar() {
