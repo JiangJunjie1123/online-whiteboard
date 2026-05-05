@@ -36,40 +36,40 @@ export function updateShapePoints(
     case 'line':
       return [sx, sy, currentPoint.x, currentPoint.y]
     case 'triangle': {
-      const r = Math.sqrt((currentPoint.x - sx) ** 2 + (currentPoint.y - sy) ** 2) * 0.5
-      const pts: number[] = []
-      for (let i = 0; i < 3; i++) {
-        const angle = -Math.PI / 2 + (Math.PI * 2 * i) / 3
-        pts.push(sx + r * Math.cos(angle), sy + r * Math.sin(angle))
-      }
-      return pts
+      const minX = Math.min(sx, currentPoint.x), maxX = Math.max(sx, currentPoint.x)
+      const minY = Math.min(sy, currentPoint.y), maxY = Math.max(sy, currentPoint.y)
+      const midX = (minX + maxX) / 2
+      return [midX, minY, minX, maxY, maxX, maxY]
     }
     case 'diamond': {
-      const r = Math.sqrt((currentPoint.x - sx) ** 2 + (currentPoint.y - sy) ** 2) * 0.5
-      const pts: number[] = []
-      for (let i = 0; i < 4; i++) {
-        const angle = (Math.PI * 2 * i) / 4 - Math.PI / 2
-        pts.push(sx + r * Math.cos(angle), sy + r * Math.sin(angle))
-      }
-      return pts
+      const minX = Math.min(sx, currentPoint.x), maxX = Math.max(sx, currentPoint.x)
+      const minY = Math.min(sy, currentPoint.y), maxY = Math.max(sy, currentPoint.y)
+      const midX = (minX + maxX) / 2, midY = (minY + maxY) / 2
+      return [midX, minY, maxX, midY, midX, maxY, minX, midY]
     }
     case 'pentagon': {
-      const r = Math.sqrt((currentPoint.x - sx) ** 2 + (currentPoint.y - sy) ** 2) * 0.5
+      const minX = Math.min(sx, currentPoint.x), maxX = Math.max(sx, currentPoint.x)
+      const minY = Math.min(sy, currentPoint.y), maxY = Math.max(sy, currentPoint.y)
+      const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2
+      const r = Math.min(maxX - minX, maxY - minY) / 2
       const pts: number[] = []
       for (let i = 0; i < 5; i++) {
         const angle = -Math.PI / 2 + (Math.PI * 2 * i) / 5
-        pts.push(sx + r * Math.cos(angle), sy + r * Math.sin(angle))
+        pts.push(cx + r * Math.cos(angle), cy + r * Math.sin(angle))
       }
       return pts
     }
     case 'star': {
-      const r = Math.sqrt((currentPoint.x - sx) ** 2 + (currentPoint.y - sy) ** 2) * 0.5
-      const innerR = r * 0.382
+      const minX = Math.min(sx, currentPoint.x), maxX = Math.max(sx, currentPoint.x)
+      const minY = Math.min(sy, currentPoint.y), maxY = Math.max(sy, currentPoint.y)
+      const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2
+      const outerR = Math.min(maxX - minX, maxY - minY) / 2
+      const innerR = outerR * 0.382
       const pts: number[] = []
       for (let i = 0; i < 10; i++) {
         const angle = -Math.PI / 2 + (Math.PI * i) / 5
-        const radius = i % 2 === 0 ? r : innerR
-        pts.push(sx + radius * Math.cos(angle), sy + radius * Math.sin(angle))
+        const r = i % 2 === 0 ? outerR : innerR
+        pts.push(cx + r * Math.cos(angle), cy + r * Math.sin(angle))
       }
       return pts
     }
