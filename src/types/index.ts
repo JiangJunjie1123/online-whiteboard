@@ -1,4 +1,5 @@
 export type ToolType = 'brush' | 'rectangle' | 'circle' | 'arrow' | 'text'
+  | 'line' | 'triangle' | 'star' | 'diamond' | 'pentagon'
 
 export interface ShapeStyle {
   strokeColor: string
