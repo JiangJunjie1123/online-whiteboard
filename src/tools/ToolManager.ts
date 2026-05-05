@@ -35,44 +35,11 @@ export function updateShapePoints(
       return [sx, sy]
     case 'line':
       return [sx, sy, currentPoint.x, currentPoint.y]
-    case 'triangle': {
-      const minX = Math.min(sx, currentPoint.x), maxX = Math.max(sx, currentPoint.x)
-      const minY = Math.min(sy, currentPoint.y), maxY = Math.max(sy, currentPoint.y)
-      const midX = (minX + maxX) / 2
-      return [midX, minY, minX, maxY, maxX, maxY]
-    }
-    case 'diamond': {
-      const minX = Math.min(sx, currentPoint.x), maxX = Math.max(sx, currentPoint.x)
-      const minY = Math.min(sy, currentPoint.y), maxY = Math.max(sy, currentPoint.y)
-      const midX = (minX + maxX) / 2, midY = (minY + maxY) / 2
-      return [midX, minY, maxX, midY, midX, maxY, minX, midY]
-    }
-    case 'pentagon': {
-      const minX = Math.min(sx, currentPoint.x), maxX = Math.max(sx, currentPoint.x)
-      const minY = Math.min(sy, currentPoint.y), maxY = Math.max(sy, currentPoint.y)
-      const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2
-      const r = Math.min(maxX - minX, maxY - minY) / 2
-      const pts: number[] = []
-      for (let i = 0; i < 5; i++) {
-        const angle = -Math.PI / 2 + (Math.PI * 2 * i) / 5
-        pts.push(cx + r * Math.cos(angle), cy + r * Math.sin(angle))
-      }
-      return pts
-    }
-    case 'star': {
-      const minX = Math.min(sx, currentPoint.x), maxX = Math.max(sx, currentPoint.x)
-      const minY = Math.min(sy, currentPoint.y), maxY = Math.max(sy, currentPoint.y)
-      const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2
-      const outerR = Math.min(maxX - minX, maxY - minY) / 2
-      const innerR = outerR * 0.382
-      const pts: number[] = []
-      for (let i = 0; i < 10; i++) {
-        const angle = -Math.PI / 2 + (Math.PI * i) / 5
-        const r = i % 2 === 0 ? outerR : innerR
-        pts.push(cx + r * Math.cos(angle), cy + r * Math.sin(angle))
-      }
-      return pts
-    }
+    case 'triangle':
+    case 'diamond':
+    case 'pentagon':
+    case 'star':
+      return [sx, sy, currentPoint.x, currentPoint.y]
     default:
       return shape.points
   }

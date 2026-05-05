@@ -10,11 +10,13 @@ interface TriangleShapeProps {
 }
 
 export function TriangleShape({ shape, isSelected, onSelect, shapeRef }: TriangleShapeProps) {
-  const pts = shape.points
-  // Centroid of 3 vertices
-  let cx = 0, cy = 0
-  for (let i = 0; i < pts.length; i += 2) { cx += pts[i]; cy += pts[i + 1] }
-  cx /= (pts.length / 2); cy /= (pts.length / 2)
+  const [x1, y1, x2, y2] = shape.points
+  const minX = Math.min(x1, x2), maxX = Math.max(x1, x2)
+  const minY = Math.min(y1, y2), maxY = Math.max(y1, y2)
+  const midX = (minX + maxX) / 2
+  const verts = [midX, minY, minX, maxY, maxX, maxY]
+  const cx = (verts[0] + verts[2] + verts[4]) / 3
+  const cy = (verts[1] + verts[3] + verts[5]) / 3
 
   return (
     <Line
@@ -22,7 +24,7 @@ export function TriangleShape({ shape, isSelected, onSelect, shapeRef }: Triangl
       ref={shapeRef}
       x={cx}
       y={cy}
-      points={pts.map((v, i) => i % 2 === 0 ? v - cx : v - cy)}
+      points={verts.map((v, i) => i % 2 === 0 ? v - cx : v - cy)}
       closed
       rotation={shape.rotation || 0}
       stroke={shape.style.strokeColor}

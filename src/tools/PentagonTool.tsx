@@ -10,11 +10,16 @@ interface PentagonShapeProps {
 }
 
 export function PentagonShape({ shape, isSelected, onSelect, shapeRef }: PentagonShapeProps) {
-  const pts = shape.points
-  // Centroid of 5 vertices
-  let cx = 0, cy = 0
-  for (let i = 0; i < pts.length; i += 2) { cx += pts[i]; cy += pts[i + 1] }
-  cx /= (pts.length / 2); cy /= (pts.length / 2)
+  const [x1, y1, x2, y2] = shape.points
+  const minX = Math.min(x1, x2), maxX = Math.max(x1, x2)
+  const minY = Math.min(y1, y2), maxY = Math.max(y1, y2)
+  const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2
+  const r = Math.min(maxX - minX, maxY - minY) / 2
+  const verts: number[] = []
+  for (let i = 0; i < 5; i++) {
+    const angle = -Math.PI / 2 + (Math.PI * 2 * i) / 5
+    verts.push(r * Math.cos(angle), r * Math.sin(angle))
+  }
 
   return (
     <Line
@@ -22,7 +27,7 @@ export function PentagonShape({ shape, isSelected, onSelect, shapeRef }: Pentago
       ref={shapeRef}
       x={cx}
       y={cy}
-      points={pts.map((v, i) => i % 2 === 0 ? v - cx : v - cy)}
+      points={verts}
       closed
       rotation={shape.rotation || 0}
       stroke={shape.style.strokeColor}

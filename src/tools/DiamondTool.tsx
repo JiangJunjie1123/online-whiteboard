@@ -10,11 +10,12 @@ interface DiamondShapeProps {
 }
 
 export function DiamondShape({ shape, isSelected, onSelect, shapeRef }: DiamondShapeProps) {
-  const pts = shape.points
-  // Centroid of 4 vertices
-  let cx = 0, cy = 0
-  for (let i = 0; i < pts.length; i += 2) { cx += pts[i]; cy += pts[i + 1] }
-  cx /= (pts.length / 2); cy /= (pts.length / 2)
+  const [x1, y1, x2, y2] = shape.points
+  const minX = Math.min(x1, x2), maxX = Math.max(x1, x2)
+  const minY = Math.min(y1, y2), maxY = Math.max(y1, y2)
+  const midX = (minX + maxX) / 2, midY = (minY + maxY) / 2
+  const verts = [midX, minY, maxX, midY, midX, maxY, minX, midY]
+  const cx = midX, cy = midY
 
   return (
     <Line
@@ -22,7 +23,7 @@ export function DiamondShape({ shape, isSelected, onSelect, shapeRef }: DiamondS
       ref={shapeRef}
       x={cx}
       y={cy}
-      points={pts.map((v, i) => i % 2 === 0 ? v - cx : v - cy)}
+      points={verts.map((v, i) => i % 2 === 0 ? v - cx : v - cy)}
       closed
       rotation={shape.rotation || 0}
       stroke={shape.style.strokeColor}

@@ -44,8 +44,8 @@ export function computeTransformedPoints(
 }
 
 // Shared polygon transform for all closed/open multi-vertex Line shapes.
-// Scales local points, applies rotation matrix, translates to world coords.
-// Rotation is fully baked into world-space points (no separate rotation field).
+// Computes the axis-aligned bounding box of the scaled local vertices,
+// then translates to world coords. Rotation is stored separately.
 function computePolygonTransform(shape: Shape, node: Konva.Line): TransformResult {
   const cx = node.x()
   const cy = node.y()
@@ -53,20 +53,21 @@ function computePolygonTransform(shape: Shape, node: Konva.Line): TransformResul
   const scaleX = node.scaleX()
   const scaleY = node.scaleY()
   const localPoints = node.points()
-  const rad = (rotation * Math.PI) / 180
-  const cos = Math.cos(rad)
-  const sin = Math.sin(rad)
 
-  const newPoints: number[] = []
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
   for (let i = 0; i < localPoints.length; i += 2) {
     const lx = localPoints[i] * scaleX
     const ly = localPoints[i + 1] * scaleY
-    newPoints.push(
-      cx + lx * cos - ly * sin,
-      cy + lx * sin + ly * cos
-    )
+    minX = Math.min(minX, lx)
+    minY = Math.min(minY, ly)
+    maxX = Math.max(maxX, lx)
+    maxY = Math.max(maxY, ly)
   }
-  return { points: newPoints }
+
+  return {
+    points: [cx + minX, cy + minY, cx + maxX, cy + maxY],
+    rotation: rotation || undefined,
+  }
 }
 
 // Brush: move only. Compute delta from node position and apply to all points.
