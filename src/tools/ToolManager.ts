@@ -36,40 +36,40 @@ export function updateShapePoints(
     case 'line':
       return [sx, sy, currentPoint.x, currentPoint.y]
     case 'triangle': {
-      const minX = Math.min(sx, currentPoint.x), maxX = Math.max(sx, currentPoint.x)
-      const minY = Math.min(sy, currentPoint.y), maxY = Math.max(sy, currentPoint.y)
-      const midX = (minX + maxX) / 2
-      return [midX, minY, minX, maxY, maxX, maxY]
+      const r = Math.sqrt((currentPoint.x - sx) ** 2 + (currentPoint.y - sy) ** 2)
+      const pts: number[] = []
+      for (let i = 0; i < 3; i++) {
+        const angle = -Math.PI / 2 + (Math.PI * 2 * i) / 3
+        pts.push(sx + r * Math.cos(angle), sy + r * Math.sin(angle))
+      }
+      return pts
     }
     case 'diamond': {
-      const minX = Math.min(sx, currentPoint.x), maxX = Math.max(sx, currentPoint.x)
-      const minY = Math.min(sy, currentPoint.y), maxY = Math.max(sy, currentPoint.y)
-      const midX = (minX + maxX) / 2, midY = (minY + maxY) / 2
-      return [midX, minY, maxX, midY, midX, maxY, minX, midY]
+      const r = Math.sqrt((currentPoint.x - sx) ** 2 + (currentPoint.y - sy) ** 2)
+      const pts: number[] = []
+      for (let i = 0; i < 4; i++) {
+        const angle = (Math.PI * 2 * i) / 4 - Math.PI / 2
+        pts.push(sx + r * Math.cos(angle), sy + r * Math.sin(angle))
+      }
+      return pts
     }
     case 'pentagon': {
-      const minX = Math.min(sx, currentPoint.x), maxX = Math.max(sx, currentPoint.x)
-      const minY = Math.min(sy, currentPoint.y), maxY = Math.max(sy, currentPoint.y)
-      const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2
-      const r = Math.min(maxX - minX, maxY - minY) / 2
+      const r = Math.sqrt((currentPoint.x - sx) ** 2 + (currentPoint.y - sy) ** 2)
       const pts: number[] = []
       for (let i = 0; i < 5; i++) {
         const angle = -Math.PI / 2 + (Math.PI * 2 * i) / 5
-        pts.push(cx + r * Math.cos(angle), cy + r * Math.sin(angle))
+        pts.push(sx + r * Math.cos(angle), sy + r * Math.sin(angle))
       }
       return pts
     }
     case 'star': {
-      const minX = Math.min(sx, currentPoint.x), maxX = Math.max(sx, currentPoint.x)
-      const minY = Math.min(sy, currentPoint.y), maxY = Math.max(sy, currentPoint.y)
-      const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2
-      const outerR = Math.min(maxX - minX, maxY - minY) / 2
-      const innerR = outerR * 0.382
+      const r = Math.sqrt((currentPoint.x - sx) ** 2 + (currentPoint.y - sy) ** 2)
+      const innerR = r * 0.382
       const pts: number[] = []
       for (let i = 0; i < 10; i++) {
         const angle = -Math.PI / 2 + (Math.PI * i) / 5
-        const r = i % 2 === 0 ? outerR : innerR
-        pts.push(cx + r * Math.cos(angle), cy + r * Math.sin(angle))
+        const radius = i % 2 === 0 ? r : innerR
+        pts.push(sx + radius * Math.cos(angle), sy + radius * Math.sin(angle))
       }
       return pts
     }
@@ -80,9 +80,12 @@ export function updateShapePoints(
 
 export function isClick(points: number[]): boolean {
   if (points.length < 4) return true
-  const [x1, y1] = [points[0], points[1]]
-  const last = points.slice(-2)
-  const dx = Math.abs(x1 - last[0])
-  const dy = Math.abs(y1 - last[1])
-  return dx < 5 && dy < 5
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+  for (let i = 0; i < points.length; i += 2) {
+    minX = Math.min(minX, points[i])
+    minY = Math.min(minY, points[i + 1])
+    maxX = Math.max(maxX, points[i])
+    maxY = Math.max(maxY, points[i + 1])
+  }
+  return (maxX - minX) < 5 && (maxY - minY) < 5
 }
