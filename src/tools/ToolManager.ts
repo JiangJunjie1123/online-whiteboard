@@ -36,7 +36,7 @@ export function updateShapePoints(
     case 'line':
       return [sx, sy, currentPoint.x, currentPoint.y]
     case 'triangle': {
-      const r = Math.sqrt((currentPoint.x - sx) ** 2 + (currentPoint.y - sy) ** 2)
+      const r = Math.sqrt((currentPoint.x - sx) ** 2 + (currentPoint.y - sy) ** 2) * 0.5
       const pts: number[] = []
       for (let i = 0; i < 3; i++) {
         const angle = -Math.PI / 2 + (Math.PI * 2 * i) / 3
@@ -45,7 +45,7 @@ export function updateShapePoints(
       return pts
     }
     case 'diamond': {
-      const r = Math.sqrt((currentPoint.x - sx) ** 2 + (currentPoint.y - sy) ** 2)
+      const r = Math.sqrt((currentPoint.x - sx) ** 2 + (currentPoint.y - sy) ** 2) * 0.5
       const pts: number[] = []
       for (let i = 0; i < 4; i++) {
         const angle = (Math.PI * 2 * i) / 4 - Math.PI / 2
@@ -54,7 +54,7 @@ export function updateShapePoints(
       return pts
     }
     case 'pentagon': {
-      const r = Math.sqrt((currentPoint.x - sx) ** 2 + (currentPoint.y - sy) ** 2)
+      const r = Math.sqrt((currentPoint.x - sx) ** 2 + (currentPoint.y - sy) ** 2) * 0.5
       const pts: number[] = []
       for (let i = 0; i < 5; i++) {
         const angle = -Math.PI / 2 + (Math.PI * 2 * i) / 5
@@ -63,7 +63,7 @@ export function updateShapePoints(
       return pts
     }
     case 'star': {
-      const r = Math.sqrt((currentPoint.x - sx) ** 2 + (currentPoint.y - sy) ** 2)
+      const r = Math.sqrt((currentPoint.x - sx) ** 2 + (currentPoint.y - sy) ** 2) * 0.5
       const innerR = r * 0.382
       const pts: number[] = []
       for (let i = 0; i < 10; i++) {
