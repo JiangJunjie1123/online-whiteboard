@@ -27,9 +27,46 @@ export function computeTransformedPoints(
     case 'text':
       return computeTextTransform(shape, node as Konva.Text)
 
+    case 'line':
+      return computePolygonTransform(shape, node as Konva.Line)
+    case 'triangle':
+      return computePolygonTransform(shape, node as Konva.Line)
+    case 'star':
+      return computePolygonTransform(shape, node as Konva.Line)
+    case 'diamond':
+      return computePolygonTransform(shape, node as Konva.Line)
+    case 'pentagon':
+      return computePolygonTransform(shape, node as Konva.Line)
+
     default:
       return { points: shape.points }
   }
+}
+
+// Shared polygon transform for all closed/open multi-vertex Line shapes.
+// Scales local points, applies rotation matrix, translates to world coords.
+// Rotation is fully baked into world-space points (no separate rotation field).
+function computePolygonTransform(shape: Shape, node: Konva.Line): TransformResult {
+  const cx = node.x()
+  const cy = node.y()
+  const rotation = node.rotation()
+  const scaleX = node.scaleX()
+  const scaleY = node.scaleY()
+  const localPoints = node.points()
+  const rad = (rotation * Math.PI) / 180
+  const cos = Math.cos(rad)
+  const sin = Math.sin(rad)
+
+  const newPoints: number[] = []
+  for (let i = 0; i < localPoints.length; i += 2) {
+    const lx = localPoints[i] * scaleX
+    const ly = localPoints[i + 1] * scaleY
+    newPoints.push(
+      cx + lx * cos - ly * sin,
+      cy + lx * sin + ly * cos
+    )
+  }
+  return { points: newPoints }
 }
 
 // Brush: move only. Compute delta from node position and apply to all points.
