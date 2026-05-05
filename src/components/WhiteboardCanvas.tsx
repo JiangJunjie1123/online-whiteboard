@@ -11,6 +11,11 @@ import { RectangleShape } from '../tools/RectangleTool'
 import { CircleShape } from '../tools/CircleTool'
 import { ArrowShape } from '../tools/ArrowTool'
 import { TextShape } from '../tools/TextTool'
+import { LineShape } from '../tools/LineTool'
+import { TriangleShape } from '../tools/TriangleTool'
+import { StarShape } from '../tools/StarTool'
+import { DiamondShape } from '../tools/DiamondTool'
+import { PentagonShape } from '../tools/PentagonTool'
 import { getSyncManager } from '../sync/SyncManager'
 import type { Shape, Point } from '../types'
 
@@ -221,6 +226,11 @@ export function WhiteboardCanvas() {
       case 'circle': return <CircleShape key={shape.id} {...props} />
       case 'arrow': return <ArrowShape key={shape.id} {...props} />
       case 'text': return <TextShape key={shape.id} {...props} />
+      case 'line': return <LineShape key={shape.id} {...props} />
+      case 'triangle': return <TriangleShape key={shape.id} {...props} />
+      case 'star': return <StarShape key={shape.id} {...props} />
+      case 'diamond': return <DiamondShape key={shape.id} {...props} />
+      case 'pentagon': return <PentagonShape key={shape.id} {...props} />
       default: return null
     }
   }
@@ -240,11 +250,25 @@ export function WhiteboardCanvas() {
             lineJoin="round"
           />
         )
+      case 'line':
       case 'rectangle':
       case 'circle':
-      case 'arrow': {
-        const ShapeComp = drawingShape.type === 'rectangle' ? RectangleShape
-          : drawingShape.type === 'circle' ? CircleShape : ArrowShape
+      case 'arrow':
+      case 'triangle':
+      case 'star':
+      case 'diamond':
+      case 'pentagon': {
+        const shapeMap: Record<string, React.FC<{ shape: Shape }>> = {
+          line: LineShape,
+          rectangle: RectangleShape,
+          circle: CircleShape,
+          arrow: ArrowShape,
+          triangle: TriangleShape,
+          star: StarShape,
+          diamond: DiamondShape,
+          pentagon: PentagonShape,
+        }
+        const ShapeComp = shapeMap[drawingShape.type]
         return <ShapeComp shape={drawingShape} />
       }
       default:
