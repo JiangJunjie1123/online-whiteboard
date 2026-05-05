@@ -109,7 +109,7 @@ function computeTextTransform(shape: Shape, node: Konva.Text): TransformResult {
   const y = node.y()
   const rotation = node.rotation()
   const scaleY = node.scaleY()
-  const fontSize = shape.style.fontSize
+  const fontSize = shape.style.fontSize !== undefined
     ? Math.round(shape.style.fontSize * scaleY)
     : Math.round(24 * scaleY)
   return {
