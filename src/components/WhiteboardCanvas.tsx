@@ -71,6 +71,9 @@ export function WhiteboardCanvas() {
       transformer.nodes([])
       transformer.getLayer()?.batchDraw()
     }
+    return () => {
+      transformer.nodes([])
+    }
   }, [selectedId, shapes])
 
   const getTransformerConfig = useCallback((shape: Shape) => {
@@ -293,10 +296,13 @@ export function WhiteboardCanvas() {
         <Layer>
           {shapes.map(renderShape)}
           {renderDrawingPreview()}
-          {selectedId && (
-            <Transformer
-              ref={transformerRef}
-              {...getTransformerConfig(shapes.find((s) => s.id === selectedId)!)}
+          {selectedId && (() => {
+            const selectedShape = shapes.find((s) => s.id === selectedId)
+            if (!selectedShape) return null
+            return (
+              <Transformer
+                ref={transformerRef}
+                {...getTransformerConfig(selectedShape)}
               onTransformEnd={handleTransformEnd}
               boundBoxFunc={(oldBox, newBox) => {
                 if (newBox.width < 5 || newBox.height < 5) {
@@ -304,8 +310,8 @@ export function WhiteboardCanvas() {
                 }
                 return newBox
               }}
-            />
-          )}
+              />
+          )})()}
         </Layer>
       </Stage>
 
