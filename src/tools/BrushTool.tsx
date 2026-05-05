@@ -1,16 +1,19 @@
 import { Line } from 'react-konva'
+import type Konva from 'konva'
 import type { Shape } from '../types'
 
 interface BrushShapeProps {
   shape: Shape
   isSelected?: boolean
   onSelect?: () => void
+  shapeRef?: (node: Konva.Line | null) => void
 }
 
-export function BrushShape({ shape, isSelected, onSelect }: BrushShapeProps) {
+export function BrushShape({ shape, isSelected, onSelect, shapeRef }: BrushShapeProps) {
   return (
     <Line
       id={shape.id}
+      ref={shapeRef}
       points={shape.points}
       stroke={shape.style.strokeColor}
       strokeWidth={shape.style.strokeWidth}
