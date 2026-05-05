@@ -1,10 +1,11 @@
 import { useRef, useState, useCallback, useEffect } from 'react'
-import { Stage, Layer, Line } from 'react-konva'
+import { Stage, Layer, Line, Transformer } from 'react-konva'
 import type Konva from 'konva'
 import { useToolStore } from '../stores/useToolStore'
 import { useCanvasStore } from '../stores/useCanvasStore'
 import { useUserStore } from '../stores/useUserStore'
 import { createShape, updateShapePoints, isClick } from '../tools/ToolManager'
+import { computeTransformedPoints } from '../tools/transformUtils'
 import { BrushShape } from '../tools/BrushTool'
 import { RectangleShape } from '../tools/RectangleTool'
 import { CircleShape } from '../tools/CircleTool'
@@ -22,6 +23,8 @@ export function WhiteboardCanvas() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const stageRef = useRef<Konva.Stage>(null)
   const cursorThrottle = useRef(0)
+  const transformerRef = useRef<Konva.Transformer>(null)
+  const shapeNodesRef = useRef<Map<string, Konva.Node>>(new Map())
 
   const { activeTool, style } = useToolStore()
   const { shapes, addShape, removeShape } = useCanvasStore()
@@ -46,18 +49,110 @@ export function WhiteboardCanvas() {
     sm.send({ type: 'operation', action, shape, shapeId })
   }, [])
 
-  const handleMouseDown = useCallback(() => {
-    const pos = getPointerPos()
+  const getShapeRef = useCallback((id: string) => (node: Konva.Node | null) => {
+    if (node) {
+      shapeNodesRef.current.set(id, node)
+    } else {
+      shapeNodesRef.current.delete(id)
+    }
+  }, [])
 
-    if (activeTool === 'text') {
-      setTextPos(pos)
-      setTextValue('')
-      setShowTextInput(true)
+  useEffect(() => {
+    const transformer = transformerRef.current
+    if (!transformer) return
+
+    if (selectedId) {
+      const node = shapeNodesRef.current.get(selectedId)
+      if (node) {
+        transformer.nodes([node])
+        transformer.getLayer()?.batchDraw()
+      }
+    } else {
+      transformer.nodes([])
+      transformer.getLayer()?.batchDraw()
+    }
+  }, [selectedId, shapes])
+
+  const getTransformerConfig = useCallback((shape: Shape) => {
+    switch (shape.type) {
+      case 'brush':
+        return {
+          enabledAnchors: [] as string[],
+          rotateEnabled: false,
+          keepRatio: false,
+        }
+      case 'text':
+        return {
+          enabledAnchors: [] as string[],
+          rotateEnabled: true,
+          keepRatio: false,
+        }
+      default:
+        return {
+          enabledAnchors: [
+            'top-left', 'top-center', 'top-right',
+            'middle-left', 'middle-right',
+            'bottom-left', 'bottom-center', 'bottom-right',
+          ] as string[],
+          rotateEnabled: true,
+          keepRatio: false,
+        }
+    }
+  }, [])
+
+  const handleTransformEnd = useCallback(() => {
+    const transformer = transformerRef.current
+    if (!transformer || !selectedId) return
+
+    const node = shapeNodesRef.current.get(selectedId)
+    if (!node) return
+
+    const shape = shapes.find((s) => s.id === selectedId)
+    if (!shape) return
+
+    const result = computeTransformedPoints(shape, node)
+
+    node.x(0)
+    node.y(0)
+    node.scaleX(1)
+    node.scaleY(1)
+    node.rotation(0)
+
+    const updated: Partial<Shape> = {
+      points: result.points,
+      rotation: result.rotation,
+    }
+    if (result.fontSize !== undefined) {
+      updated.style = { ...shape.style, fontSize: result.fontSize }
+    }
+
+    useCanvasStore.getState().updateShape(selectedId, updated)
+
+    const fullShape = { ...shape, ...updated, style: updated.style ?? shape.style }
+    syncSend('update', fullShape)
+
+    transformer.getLayer()?.batchDraw()
+  }, [selectedId, shapes, syncSend])
+
+  const handleMouseDown = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
+    // Click on empty canvas area
+    if (e.target === e.target.getStage()) {
+      setSelectedId(null)
+      const pos = getPointerPos()
+
+      if (activeTool === 'text') {
+        setTextPos(pos)
+        setTextValue('')
+        setShowTextInput(true)
+        return
+      }
+
+      const shape = createShape(activeTool, pos, style, userId || undefined)
+      setDrawingShape(shape)
       return
     }
 
-    const shape = createShape(activeTool, pos, style, userId || undefined)
-    setDrawingShape(shape)
+    // Click on a shape — selection is handled by the shape's onClick
   }, [activeTool, style, getPointerPos, userId])
 
   const handleMouseMove = useCallback(() => {
@@ -115,6 +210,7 @@ export function WhiteboardCanvas() {
       shape,
       isSelected: shape.id === selectedId,
       onSelect: () => handleSelectShape(shape.id),
+      shapeRef: getShapeRef(shape.id),
     }
     switch (shape.type) {
       case 'brush': return <BrushShape key={shape.id} {...props} />
@@ -197,6 +293,19 @@ export function WhiteboardCanvas() {
         <Layer>
           {shapes.map(renderShape)}
           {renderDrawingPreview()}
+          {selectedId && (
+            <Transformer
+              ref={transformerRef}
+              {...getTransformerConfig(shapes.find((s) => s.id === selectedId)!)}
+              onTransformEnd={handleTransformEnd}
+              boundBoxFunc={(oldBox, newBox) => {
+                if (newBox.width < 5 || newBox.height < 5) {
+                  return oldBox
+                }
+                return newBox
+              }}
+            />
+          )}
         </Layer>
       </Stage>
 
