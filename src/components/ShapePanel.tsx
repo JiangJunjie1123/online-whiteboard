@@ -1,9 +1,10 @@
 import { useToolStore } from '../stores/useToolStore'
-import { TOOLS } from '../config/tools'
+import { getTools } from '../config/tools'
 import type { ToolType } from '../types'
 
 export function ShapePanel() {
   const { activeTool, setTool } = useToolStore()
+  const tools = getTools()
 
   return (
     <div className="px-3 py-3 border-b border-gray-100">
@@ -11,7 +12,7 @@ export function ShapePanel() {
         工具
       </h3>
       <div className="grid grid-cols-2 gap-2">
-        {TOOLS.map((tool) => {
+        {tools.map((tool) => {
           const isActive = activeTool === tool.type
           return (
             <button

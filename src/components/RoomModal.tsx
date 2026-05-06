@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useUserStore } from '../stores/useUserStore'
 import { useAuthStore } from '../stores/useAuthStore'
 import { getSyncManager } from '../sync/SyncManager'
@@ -12,6 +12,14 @@ export function RoomModal({ onEnter }: RoomModalProps) {
   const [roomId, setRoomId] = useState('')
   const [mode, setMode] = useState<'create' | 'join'>('create')
   const [error, setError] = useState('')
+
+  // Pre-fill nickname for authenticated users
+  useEffect(() => {
+    const auth = useAuthStore.getState()
+    if (auth.isAuthenticated && auth.userName && !userName) {
+      setUserName(auth.userName)
+    }
+  }, [])
 
   const handleSubmit = () => {
     if (!userName.trim()) {
@@ -70,17 +78,25 @@ export function RoomModal({ onEnter }: RoomModalProps) {
         </div>
 
         <div className="space-y-3">
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">昵称</label>
-            <input
-              type="text"
-              value={userName}
-              onChange={(e) => { setUserName(e.target.value); setError('') }}
-              placeholder="输入你的昵称"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:border-gray-500"
-              maxLength={20}
-            />
-          </div>
+          {useAuthStore.getState().isAuthenticated ? (
+            <div className="flex items-center gap-2 px-3 py-2 bg-primary-light/30 rounded-lg">
+              <span className="text-xs text-primary/70">👤</span>
+              <span className="text-sm font-medium text-primary">{userName}</span>
+              <span className="text-[10px] text-primary/50 ml-auto">已登录</span>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">昵称</label>
+              <input
+                type="text"
+                value={userName}
+                onChange={(e) => { setUserName(e.target.value); setError('') }}
+                placeholder="输入你的昵称"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:border-gray-500"
+                maxLength={20}
+              />
+            </div>
+          )}
 
           {mode === 'join' && (
             <div>
