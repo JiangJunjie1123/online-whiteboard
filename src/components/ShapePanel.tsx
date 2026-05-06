@@ -9,7 +9,7 @@ export function ShapePanel() {
   return (
     <div className="px-3 py-3 border-b border-gray-100">
       <h3 className="text-[10px] font-medium text-primary/50 uppercase tracking-wider mb-2 px-1">
-        工具
+        工具（拖拽到画布 | 点击选中后绘制）
       </h3>
       <div className="grid grid-cols-2 gap-2">
         {tools.map((tool) => {
@@ -17,8 +17,13 @@ export function ShapePanel() {
           return (
             <button
               key={tool.type}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData('application/x-shape-type', tool.type)
+                e.dataTransfer.effectAllowed = 'copy'
+              }}
               onClick={() => setTool(tool.type as ToolType)}
-              className={`flex flex-col items-center gap-1.5 p-3 rounded-xl cursor-pointer border transition-all duration-150
+              className={`flex flex-col items-center gap-1.5 p-3 rounded-xl cursor-grab border transition-all duration-150 active:cursor-grabbing
                 ${isActive
                   ? 'bg-primary text-white shadow-md border-primary'
                   : 'bg-surface hover:bg-primary-light/30 border-gray-100 text-primary/70'

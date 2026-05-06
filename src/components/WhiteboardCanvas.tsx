@@ -293,8 +293,60 @@ export function WhiteboardCanvas() {
     return () => window.removeEventListener('keydown', handleKey)
   }, [selectedId, shapes, userId, removeShape, syncSend])
 
+  // Drag-and-drop from toolbar: create shape at drop position
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'copy'
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    const shapeType = e.dataTransfer.getData('application/x-shape-type')
+    if (!shapeType) return
+
+    const rect = e.currentTarget.getBoundingClientRect()
+    const screenX = e.clientX - rect.left
+    const screenY = e.clientY - rect.top
+
+    // Convert screen position to world coordinates
+    const worldX = (screenX - stageX) / scale
+    const worldY = (screenY - stageY) / scale
+
+    const shape = createShape(shapeType, { x: worldX, y: worldY }, style, userId || undefined)
+    // Set default size for the shape
+    const defaultW = 100
+    const defaultH = 80
+    switch (shapeType) {
+      case 'brush':
+        shape.points = [worldX, worldY, worldX + 10, worldY + 10]
+        break
+      case 'line':
+      case 'arrow':
+      case 'double-arrow':
+      case 'dashed-line':
+      case 'curved-arrow':
+        shape.points = [worldX, worldY, worldX + defaultW, worldY]
+        break
+      case 'text':
+        shape.points = [worldX, worldY]
+        shape.text = '文本'
+        break
+      default:
+        shape.points = [worldX, worldY, worldX + defaultW, worldY + defaultH]
+    }
+
+    addShape(shape)
+    syncSend('draw', shape)
+  }, [stageX, stageY, scale, style, userId, addShape, syncSend])
+
   return (
-    <div className="w-full h-full relative" style={{ touchAction: 'none' }} onContextMenu={(e) => e.preventDefault()}>
+    <div
+      className="w-full h-full relative"
+      style={{ touchAction: 'none' }}
+      onContextMenu={(e) => e.preventDefault()}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
       <Stage
         ref={stageRef}
         width={size.width}
