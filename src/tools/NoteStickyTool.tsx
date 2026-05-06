@@ -1,8 +1,8 @@
-import { Rect } from 'react-konva'
+import { Group, Rect } from 'react-konva'
 import type Konva from 'konva'
 import type { Shape, Point } from '../types'
 import { shapeRegistry } from '../config/shapeRegistry'
-import { computeTextTransform } from '../tools/transformUtils'
+import { computeRectTransform } from '../tools/transformUtils'
 import { useCanvasStore } from '../stores/useCanvasStore'
 import { getSyncManager } from '../sync/SyncManager'
 
@@ -17,8 +17,8 @@ export function NoteStickyShape({ shape, isSelected, onSelect, shapeRef }: NoteS
   const [x1, y1, x2, y2] = shape.points
   const x = Math.min(x1, x2)
   const y = Math.min(y1, y2)
-  const width = Math.abs(x2 - x1)
-  const height = Math.abs(y2 - y1)
+  const w = Math.abs(x2 - x1) || 100
+  const h = Math.abs(y2 - y1) || 80
 
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
     const node = e.target
@@ -35,29 +35,56 @@ export function NoteStickyShape({ shape, isSelected, onSelect, shapeRef }: NoteS
   }
 
   return (
-    <Rect
+    <Group
       id={shape.id}
-      ref={shapeRef}
+      ref={shapeRef as any}
       x={x}
       y={y}
-      width={width || 1}
-      height={height || 1}
       rotation={shape.rotation || 0}
-      cornerRadius={3}
-      stroke={shape.style.strokeColor}
-      strokeWidth={shape.style.strokeWidth}
-      fill={shape.style.fillColor || '#FFF9C4'}
-      opacity={shape.style.opacity}
-      shadowColor="#000"
-      shadowBlur={4}
-      shadowOffsetX={2}
-      shadowOffsetY={2}
-      shadowOpacity={0.15}
       onClick={onSelect}
       onTap={onSelect}
       draggable
       onDragEnd={handleDragEnd}
-    />
+    >
+      {/* Shadow rect (slightly offset) */}
+      <Rect
+        x={3}
+        y={3}
+        width={w}
+        height={h}
+        fill="#000"
+        opacity={0.08}
+        cornerRadius={2}
+        listening={false}
+      />
+      {/* Main sticky note body */}
+      <Rect
+        width={w}
+        height={h}
+        fill={shape.style.fillColor || '#FFF9C4'}
+        stroke={shape.style.strokeColor || '#E6C300'}
+        strokeWidth={shape.style.strokeWidth || 1}
+        cornerRadius={2}
+        shadowColor="#000"
+        shadowBlur={5}
+        shadowOffsetX={1}
+        shadowOffsetY={2}
+        shadowOpacity={0.15}
+        listening={false}
+      />
+      {/* Fold corner */}
+      <Rect
+        x={w - 15}
+        y={0}
+        width={15}
+        height={15}
+        fill={shape.style.fillColor || '#FFF9C4'}
+        stroke={shape.style.strokeColor || '#E6C300'}
+        strokeWidth={0.5}
+        opacity={0.7}
+        listening={false}
+      />
+    </Group>
   )
 }
 
@@ -68,6 +95,6 @@ shapeRegistry.register({
   category: 'annotation',
   renderer: (props) => <NoteStickyShape {...props} />,
   updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
-  defaultStyle: { strokeColor: '#D4A017', strokeWidth: 1, fillColor: '#FFF9C4', opacity: 0.9 },
-  transform: (shape, node, stageScale) => computeTextTransform(shape, node as Konva.Text, stageScale),
+  defaultStyle: { strokeColor: '#E6C300', strokeWidth: 1, fillColor: '#FFF9C4', opacity: 1 },
+  transform: (shape, node, stageScale) => computeRectTransform(shape, node as Konva.Rect, stageScale),
 })

@@ -48,7 +48,7 @@ export function CurvedArrowShape({ shape, isSelected, onSelect, shapeRef }: Curv
       pointerLength={Math.min(15, len / 3)}
       pointerWidth={Math.min(10, len / 4)}
       bezier
-      tension={0.5}
+      tension={0.8}
       onClick={onSelect}
       onTap={onSelect}
       hitStrokeWidth={shape.style.strokeWidth + 10}

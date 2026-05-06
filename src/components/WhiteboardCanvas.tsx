@@ -370,6 +370,13 @@ export function WhiteboardCanvas() {
         shape.points = [worldX, worldY]
         shape.text = '文本'
         break
+      case 'flow-terminator':
+        shape.points = [worldX, worldY, worldX + 100, worldY + 40]
+        shape.text = '开始/结束'
+        break
+      case 'note-sticky':
+        shape.points = [worldX, worldY, worldX + 120, worldY + 100]
+        break
       default:
         shape.points = [worldX, worldY, worldX + defaultW, worldY + defaultH]
     }

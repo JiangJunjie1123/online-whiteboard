@@ -1,4 +1,4 @@
-import { Rect } from 'react-konva'
+import { Group, Rect, Text } from 'react-konva'
 import type Konva from 'konva'
 import type { Shape, Point } from '../types'
 import { shapeRegistry } from '../config/shapeRegistry'
@@ -17,8 +17,9 @@ export function FlowTerminatorShape({ shape, isSelected, onSelect, shapeRef }: F
   const [x1, y1, x2, y2] = shape.points
   const x = Math.min(x1, x2)
   const y = Math.min(y1, y2)
-  const width = Math.abs(x2 - x1)
-  const height = Math.abs(y2 - y1)
+  const w = Math.abs(x2 - x1) || 80
+  const h = Math.abs(y2 - y1) || 40
+  const radius = Math.min(w, h) / 2
 
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
     const node = e.target
@@ -35,24 +36,37 @@ export function FlowTerminatorShape({ shape, isSelected, onSelect, shapeRef }: F
   }
 
   return (
-    <Rect
+    <Group
       id={shape.id}
-      ref={shapeRef}
+      ref={shapeRef as any}
       x={x}
       y={y}
-      width={width || 1}
-      height={height || 1}
       rotation={shape.rotation || 0}
-      cornerRadius={Math.min(width, height) / 2}
-      stroke={shape.style.strokeColor}
-      strokeWidth={shape.style.strokeWidth}
-      fill={shape.style.fillColor}
-      opacity={shape.style.opacity}
       onClick={onSelect}
       onTap={onSelect}
       draggable
       onDragEnd={handleDragEnd}
-    />
+    >
+      <Rect
+        width={w}
+        height={h}
+        fill={shape.style.fillColor || '#EBF5FB'}
+        stroke={shape.style.strokeColor || '#2980B9'}
+        strokeWidth={shape.style.strokeWidth || 2}
+        cornerRadius={radius}
+        listening={false}
+      />
+      <Text
+        width={w}
+        height={h}
+        text={shape.text || '开始'}
+        fontSize={shape.style.fontSize || 14}
+        fill="#1f2937"
+        align="center"
+        verticalAlign="middle"
+        listening={false}
+      />
+    </Group>
   )
 }
 
