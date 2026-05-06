@@ -46,7 +46,15 @@ export function FlowTerminatorShape({ shape, isSelected, onSelect, shapeRef }: F
       onTap={onSelect}
       draggable
       onDragEnd={handleDragEnd}
+      onDblClick={() => {
+        const textTypes = ["text","connector-label","flow-terminator","note-sticky","class-box","or-circle","callout"]
+        if (shape.text !== undefined || textTypes.includes(shape.type)) {
+          ;(window as any).__editShapeText?.(shape.id, shape.text || "")
+        }
+      }}
     >
+      {/* Transparent hit area for drag */}
+      <Rect width={w} height={h} fill="transparent" />
       <Rect
         width={w}
         height={h}

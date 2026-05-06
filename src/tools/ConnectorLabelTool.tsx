@@ -1,4 +1,4 @@
-import { Group, Arrow, Text } from 'react-konva'
+import { Group, Arrow, Text, Rect } from 'react-konva'
 import type Konva from 'konva'
 import type { Shape, Point } from '../types'
 import { shapeRegistry } from '../config/shapeRegistry'
@@ -49,7 +49,15 @@ export function ConnectorLabelShape({ shape, isSelected, onSelect, shapeRef }: C
       onTap={onSelect}
       draggable
       onDragEnd={handleDragEnd}
+      onDblClick={() => {
+        const textTypes = ["text","connector-label","flow-terminator","note-sticky","class-box","or-circle","callout"]
+        if (shape.text !== undefined || textTypes.includes(shape.type)) {
+          ;(window as any).__editShapeText?.(shape.id, shape.text || "")
+        }
+      }}
     >
+      {/* Transparent hit area for drag */}
+      <Rect width={w} height={h} fill="transparent" />
       {/* Connector line */}
       <Arrow
         points={[0, 0, w, h]}

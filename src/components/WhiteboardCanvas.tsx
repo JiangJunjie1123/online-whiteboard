@@ -42,6 +42,20 @@ export function WhiteboardCanvas() {
     useCanvasStore.getState().setStageGetter(() => stageRef.current)
   }, [])
 
+  useEffect(() => {
+    (window as any).__editShapeText = (shapeId: string, currentText: string) => {
+      const s = shapes.find(sh => sh.id === shapeId)
+      if (s) {
+        const pos = { x: s.points[0], y: s.points[1] }
+        setTextPos(pos)
+        setTextValue(currentText)
+        setShowTextInput(true)
+        setSelectedId(shapeId)
+      }
+    }
+    return () => { delete (window as any).__editShapeText }
+  }, [shapes])
+
   const getPointerPos = useCallback((): Point => {
     const stage = stageRef.current
     if (!stage) return { x: 0, y: 0 }

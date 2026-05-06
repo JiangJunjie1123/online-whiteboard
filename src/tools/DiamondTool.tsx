@@ -52,6 +52,12 @@ export function DiamondShape({ shape, isSelected, onSelect, shapeRef }: DiamondS
       onTap={onSelect}
       draggable
       onDragEnd={handleDragEnd}
+      onDblClick={() => {
+        const textTypes = ["text","connector-label","flow-terminator","note-sticky","class-box","or-circle","callout"]
+        if (shape.text !== undefined || textTypes.includes(shape.type)) {
+          ;(window as any).__editShapeText?.(shape.id, shape.text || "")
+        }
+      }}
     />
   )
 }

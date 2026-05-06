@@ -1,4 +1,4 @@
-import { Group, Ellipse, Text } from 'react-konva'
+import { Group, Ellipse, Text, Rect } from 'react-konva'
 import type Konva from 'konva'
 import type { Shape, Point } from '../types'
 import { shapeRegistry } from '../config/shapeRegistry'
@@ -46,7 +46,15 @@ export function OrCircleShape({ shape, isSelected, onSelect, shapeRef }: OrCircl
       onTap={onSelect}
       draggable
       onDragEnd={handleDragEnd}
+      onDblClick={() => {
+        const textTypes = ["text","connector-label","flow-terminator","note-sticky","class-box","or-circle","callout"]
+        if (shape.text !== undefined || textTypes.includes(shape.type)) {
+          ;(window as any).__editShapeText?.(shape.id, shape.text || "")
+        }
+      }}
     >
+      {/* Transparent hit area for drag */}
+      <Rect width={w} height={h} fill="transparent" />
       {/* Circle */}
       <Ellipse
         x={r}
