@@ -1,6 +1,7 @@
 import { Arrow } from 'react-konva'
 import type Konva from 'konva'
-import type { Shape } from '../types'
+import type { Shape, Point } from '../types'
+import { shapeRegistry } from '../config/shapeRegistry'
 
 interface ArrowShapeProps {
   shape: Shape
@@ -35,3 +36,12 @@ export function ArrowShape({ shape, isSelected, onSelect, shapeRef }: ArrowShape
     />
   )
 }
+
+shapeRegistry.register({
+  type: 'arrow',
+  label: '箭头',
+  icon: '➡️',
+  category: 'arrow',
+  renderer: (props) => <ArrowShape {...props} />,
+  updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
+})

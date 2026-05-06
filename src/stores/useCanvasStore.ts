@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type Konva from 'konva'
 import type { Shape } from '../types'
 
 interface CanvasState {
@@ -6,12 +7,16 @@ interface CanvasState {
   stageX: number
   stageY: number
   scale: number
+  gridVisible: boolean
+  getStage: (() => Konva.Stage | null) | null
   setShapes: (shapes: Shape[]) => void
   addShape: (shape: Shape, remote?: boolean) => void
   updateShape: (id: string, partial: Partial<Shape>, remote?: boolean) => void
   removeShape: (id: string, remote?: boolean) => void
   clearCanvas: (remote?: boolean) => void
   setViewport: (x: number, y: number, scale: number) => void
+  setStageGetter: (getter: () => Konva.Stage | null) => void
+  setGridVisible: (visible: boolean) => void
   /** Undo: remove the last shape created by `userId`. Returns the removed shapeId or null. */
   undoOwn: (userId: string) => string | null
 }
@@ -24,8 +29,12 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   stageX: 0,
   stageY: 0,
   scale: 1,
+  gridVisible: true,
+  getStage: null,
 
   setViewport: (x, y, scale) => set({ stageX: x, stageY: y, scale }),
+  setStageGetter: (getter) => set({ getStage: getter }),
+  setGridVisible: (visible) => set({ gridVisible: visible }),
 
   setShapes: (shapes) => set({ shapes }),
 

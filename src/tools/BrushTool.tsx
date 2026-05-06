@@ -1,6 +1,7 @@
 import { Line } from 'react-konva'
 import type Konva from 'konva'
-import type { Shape } from '../types'
+import type { Shape, Point } from '../types'
+import { shapeRegistry } from '../config/shapeRegistry'
 
 interface BrushShapeProps {
   shape: Shape
@@ -28,3 +29,13 @@ export function BrushShape({ shape, isSelected, onSelect, shapeRef }: BrushShape
     />
   )
 }
+
+shapeRegistry.register({
+  type: 'brush',
+  label: '画笔',
+  icon: '✏️',
+  category: 'basic',
+  renderer: (props) => <BrushShape {...props} />,
+  updatePoints: (shape: Shape, pt: Point) => [...shape.points, pt.x, pt.y],
+  getTransformerConfig: () => ({ enabledAnchors: [], rotateEnabled: false, keepRatio: false }),
+})

@@ -1,6 +1,7 @@
 import { Ellipse } from 'react-konva'
 import type Konva from 'konva'
-import type { Shape } from '../types'
+import type { Shape, Point } from '../types'
+import { shapeRegistry } from '../config/shapeRegistry'
 
 interface CircleShapeProps {
   shape: Shape
@@ -34,3 +35,12 @@ export function CircleShape({ shape, isSelected, onSelect, shapeRef }: CircleSha
     />
   )
 }
+
+shapeRegistry.register({
+  type: 'circle',
+  label: '圆形',
+  icon: '⭕',
+  category: 'basic',
+  renderer: (props) => <CircleShape {...props} />,
+  updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
+})

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useUserStore } from '../stores/useUserStore'
+import { useAuthStore } from '../stores/useAuthStore'
 import { getSyncManager } from '../sync/SyncManager'
 
 interface RoomModalProps {
@@ -27,7 +28,15 @@ export function RoomModal({ onEnter }: RoomModalProps) {
       return
     }
 
-    const userId = 'user_' + crypto.randomUUID()
+    const authStore = useAuthStore.getState()
+    let userId: string
+    if (authStore.isAuthenticated && authStore.userId) {
+      userId = authStore.userId
+    } else {
+      userId = 'user_' + crypto.randomUUID()
+      useAuthStore.getState().setGuest(userId, userName.trim())
+    }
+
     sm.joinRoom(mode === 'join' ? roomId.trim() : undefined, userId, userName.trim())
     onEnter()
   }

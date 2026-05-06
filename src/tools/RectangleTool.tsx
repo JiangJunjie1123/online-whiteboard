@@ -1,6 +1,7 @@
 import { Rect } from 'react-konva'
 import type Konva from 'konva'
-import type { Shape } from '../types'
+import type { Shape, Point } from '../types'
+import { shapeRegistry } from '../config/shapeRegistry'
 
 interface RectShapeProps {
   shape: Shape
@@ -35,3 +36,12 @@ export function RectangleShape({ shape, isSelected, onSelect, shapeRef }: RectSh
     />
   )
 }
+
+shapeRegistry.register({
+  type: 'rectangle',
+  label: '矩形',
+  icon: '⬜',
+  category: 'basic',
+  renderer: (props) => <RectangleShape {...props} />,
+  updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
+})

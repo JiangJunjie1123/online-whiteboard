@@ -1,6 +1,7 @@
 import { Line } from 'react-konva'
 import type Konva from 'konva'
-import type { Shape } from '../types'
+import type { Shape, Point } from '../types'
+import { shapeRegistry } from '../config/shapeRegistry'
 
 interface StarShapeProps {
   shape: Shape
@@ -41,3 +42,12 @@ export function StarShape({ shape, isSelected, onSelect, shapeRef }: StarShapePr
     />
   )
 }
+
+shapeRegistry.register({
+  type: 'star',
+  label: '星形',
+  icon: '⭐',
+  category: 'basic',
+  renderer: (props) => <StarShape {...props} />,
+  updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
+})

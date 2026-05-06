@@ -1,6 +1,7 @@
 import { Line } from 'react-konva'
 import type Konva from 'konva'
-import type { Shape } from '../types'
+import type { Shape, Point } from '../types'
+import { shapeRegistry } from '../config/shapeRegistry'
 
 interface PentagonShapeProps {
   shape: Shape
@@ -39,3 +40,12 @@ export function PentagonShape({ shape, isSelected, onSelect, shapeRef }: Pentago
     />
   )
 }
+
+shapeRegistry.register({
+  type: 'pentagon',
+  label: '五边',
+  icon: '⬠',
+  category: 'basic',
+  renderer: (props) => <PentagonShape {...props} />,
+  updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
+})

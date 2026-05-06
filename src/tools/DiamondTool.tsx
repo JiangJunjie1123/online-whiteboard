@@ -1,6 +1,7 @@
 import { Line } from 'react-konva'
 import type Konva from 'konva'
-import type { Shape } from '../types'
+import type { Shape, Point } from '../types'
+import { shapeRegistry } from '../config/shapeRegistry'
 
 interface DiamondShapeProps {
   shape: Shape
@@ -35,3 +36,12 @@ export function DiamondShape({ shape, isSelected, onSelect, shapeRef }: DiamondS
     />
   )
 }
+
+shapeRegistry.register({
+  type: 'diamond',
+  label: '菱形',
+  icon: '🔷',
+  category: 'basic',
+  renderer: (props) => <DiamondShape {...props} />,
+  updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
+})

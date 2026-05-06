@@ -6,6 +6,7 @@ import { useCanvasStore } from '../stores/useCanvasStore'
 import { useUserStore } from '../stores/useUserStore'
 import { createShape, updateShapePoints, isClick } from '../tools/ToolManager'
 import { computeTransformedPoints } from '../tools/transformUtils'
+import { exportCanvas } from '../utils/exportCanvas'
 import { GridBackground } from './GridBackground'
 import { BrushShape } from '../tools/BrushTool'
 import { RectangleShape } from '../tools/RectangleTool'
@@ -40,6 +41,10 @@ export function WhiteboardCanvas() {
     const handleResize = () => setSize({ width: window.innerWidth, height: window.innerHeight })
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  useEffect(() => {
+    useCanvasStore.getState().setStageGetter(() => stageRef.current)
   }, [])
 
   const getPointerPos = useCallback((): Point => {
@@ -303,6 +308,10 @@ export function WhiteboardCanvas() {
             syncSend('delete', undefined, removedId)
           }
         }
+      }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'E') {
+        e.preventDefault()
+        exportCanvas()
       }
     }
     window.addEventListener('keydown', handleKey)

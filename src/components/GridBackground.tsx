@@ -1,7 +1,9 @@
 import { Layer, Rect } from 'react-konva'
 import { useState, useEffect } from 'react'
+import { useCanvasStore } from '../stores/useCanvasStore'
 
 export function GridBackground() {
+  const gridVisible = useCanvasStore((s) => s.gridVisible)
   const [patternImage, setPatternImage] = useState<HTMLImageElement | null>(null)
 
   useEffect(() => {
@@ -20,6 +22,8 @@ export function GridBackground() {
     img.onload = () => setPatternImage(img)
     img.src = canvas.toDataURL()
   }, [])
+
+  if (!gridVisible) return null
 
   return (
     <Layer listening={false}>

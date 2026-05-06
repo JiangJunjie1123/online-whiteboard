@@ -1,6 +1,7 @@
 import { Line } from 'react-konva'
 import type Konva from 'konva'
-import type { Shape } from '../types'
+import type { Shape, Point } from '../types'
+import { shapeRegistry } from '../config/shapeRegistry'
 
 interface LineShapeProps {
   shape: Shape
@@ -31,3 +32,12 @@ export function LineShape({ shape, isSelected, onSelect, shapeRef }: LineShapePr
     />
   )
 }
+
+shapeRegistry.register({
+  type: 'line',
+  label: '直线',
+  icon: '📏',
+  category: 'basic',
+  renderer: (props) => <LineShape {...props} />,
+  updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
+})
