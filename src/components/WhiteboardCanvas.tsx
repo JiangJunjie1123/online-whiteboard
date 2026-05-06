@@ -20,8 +20,10 @@ export function WhiteboardCanvas() {
   const [textPos, setTextPos] = useState<Point>({ x: 0, y: 0 })
   const [textValue, setTextValue] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [panning, setPanning] = useState(false)
   const stageRef = useRef<Konva.Stage>(null)
   const cursorThrottle = useRef(0)
+  const panStart = useRef({ x: 0, y: 0, stageX: 0, stageY: 0 })
   const transformerRef = useRef<Konva.Transformer>(null)
   const shapeNodesRef = useRef<Map<string, Konva.Node>>(new Map())
 
@@ -134,6 +136,13 @@ export function WhiteboardCanvas() {
     e.evt.preventDefault()
     e.evt.stopPropagation()
 
+    // Middle mouse button — start panning
+    if (e.evt.button === 1) {
+      setPanning(true)
+      panStart.current = { x: e.evt.clientX, y: e.evt.clientY, stageX, stageY }
+      return
+    }
+
     // Click on empty canvas area
     if (e.target === e.target.getStage()) {
       setSelectedId(null)
@@ -152,9 +161,17 @@ export function WhiteboardCanvas() {
     }
 
     // Click on a shape — selection is handled by the shape's onClick
-  }, [activeTool, style, getPointerPos, userId])
+  }, [activeTool, style, getPointerPos, userId, stageX, stageY])
 
-  const handleMouseMove = useCallback(() => {
+  const handleMouseMove = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
+    // Middle-button panning
+    if (panning) {
+      const dx = e.evt.clientX - panStart.current.x
+      const dy = e.evt.clientY - panStart.current.y
+      useCanvasStore.getState().setViewport(panStart.current.stageX + dx, panStart.current.stageY + dy, scale)
+      return
+    }
+
     // Update drawing preview
     if (drawingShape) {
       const pos = getPointerPos()
@@ -172,16 +189,38 @@ export function WhiteboardCanvas() {
         sm.send({ type: 'cursor_move', position: pos })
       }
     }
-  }, [drawingShape, getPointerPos])
+  }, [panning, drawingShape, getPointerPos, scale])
 
   const handleMouseUp = useCallback(() => {
+    if (panning) {
+      setPanning(false)
+      return
+    }
     if (!drawingShape) return
     if (!isClick(drawingShape.points, scale)) {
       addShape(drawingShape)
       syncSend('draw', drawingShape)
+      // Auto-expand: if shape touches viewport edge, pan slightly to give more room
+      const margin = 100
+      const vs = useCanvasStore.getState()
+      const [x1, y1, x2, y2] = drawingShape.points
+      const worldRight = Math.max(x1, x2) * vs.scale + vs.stageX
+      const worldBottom = Math.max(y1, y2) * vs.scale + vs.stageY
+      const worldLeft = Math.min(x1, x2) * vs.scale + vs.stageX
+      const worldTop = Math.min(y1, y2) * vs.scale + vs.stageY
+      const viewW = window.innerWidth
+      const viewH = window.innerHeight
+      let { stageX: nx, stageY: ny } = vs
+      if (worldRight > viewW - margin) nx -= (worldRight - viewW + margin)
+      if (worldBottom > viewH - margin) ny -= (worldBottom - viewH + margin)
+      if (worldLeft < margin) nx += (margin - worldLeft)
+      if (worldTop < margin) ny += (margin - worldTop)
+      if (nx !== vs.stageX || ny !== vs.stageY) {
+        useCanvasStore.getState().setViewport(nx, ny, vs.scale)
+      }
     }
     setDrawingShape(null)
-  }, [drawingShape, addShape, syncSend])
+  }, [panning, drawingShape, addShape, syncSend, scale])
 
   const handleTextConfirm = useCallback(() => {
     if (textValue.trim()) {
@@ -314,8 +353,8 @@ export function WhiteboardCanvas() {
 
     const shape = createShape(shapeType, { x: worldX, y: worldY }, style, userId || undefined)
     // Set default size for the shape
-    const defaultW = 100
-    const defaultH = 80
+    const defaultW = 80
+    const defaultH = 60
     switch (shapeType) {
       case 'brush':
         shape.points = [worldX, worldY, worldX + 10, worldY + 10]
@@ -355,11 +394,6 @@ export function WhiteboardCanvas() {
         y={stageY}
         scaleX={scale}
         scaleY={scale}
-        draggable
-        onDragEnd={(e) => {
-          const node = e.currentTarget
-          useCanvasStore.getState().setViewport(node.x(), node.y(), scale)
-        }}
         onWheel={(e) => {
           e.evt.preventDefault()
           const stage = stageRef.current
@@ -381,8 +415,8 @@ export function WhiteboardCanvas() {
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        style={{ cursor: activeTool === 'text' ? 'text' : 'crosshair' }}
+        onMouseLeave={() => { setPanning(false); setDrawingShape(null) }}
+        style={{ cursor: panning ? 'grabbing' : activeTool === 'text' ? 'text' : 'crosshair' }}
       >
         <GridBackground />
         <Layer>
@@ -439,7 +473,7 @@ export function WhiteboardCanvas() {
 
       {/* Status */}
       <div className="fixed bottom-3 left-1/2 -translate-x-1/2 text-xs text-gray-400 bg-white/60 backdrop-blur-sm px-3 py-1 rounded-full">
-        形状: {shapes.length} · {Math.round(scale * 100)}% · Ctrl+Z 撤销 · Delete 删除
+        形状: {shapes.length} · {Math.round(scale * 100)}% · 中键拖拽平移 · Ctrl+Z 撤销 · Delete 删除
       </div>
     </div>
   )
