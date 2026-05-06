@@ -6,6 +6,7 @@ import { useCanvasStore } from '../stores/useCanvasStore'
 import { useUserStore } from '../stores/useUserStore'
 import { createShape, updateShapePoints, isClick } from '../tools/ToolManager'
 import { computeTransformedPoints } from '../tools/transformUtils'
+import { GridBackground } from './GridBackground'
 import { BrushShape } from '../tools/BrushTool'
 import { RectangleShape } from '../tools/RectangleTool'
 import { CircleShape } from '../tools/CircleTool'
@@ -32,7 +33,7 @@ export function WhiteboardCanvas() {
   const shapeNodesRef = useRef<Map<string, Konva.Node>>(new Map())
 
   const { activeTool, style } = useToolStore()
-  const { shapes, addShape, removeShape } = useCanvasStore()
+  const { shapes, addShape, removeShape, stageX, stageY, scale } = useCanvasStore()
   const { userId } = useUserStore()
 
   useEffect(() => {
@@ -44,8 +45,11 @@ export function WhiteboardCanvas() {
   const getPointerPos = useCallback((): Point => {
     const stage = stageRef.current
     if (!stage) return { x: 0, y: 0 }
-    const pos = stage.getPointerPosition()
-    return pos ? { x: pos.x, y: pos.y } : { x: 0, y: 0 }
+    const pointer = stage.getPointerPosition()
+    if (!pointer) return { x: 0, y: 0 }
+    const transform = stage.getAbsoluteTransform().copy().invert()
+    const worldPos = transform.point({ x: pointer.x, y: pointer.y })
+    return { x: worldPos.x, y: worldPos.y }
   }, [])
 
   const syncSend = useCallback((action: string, shape?: Shape, shapeId?: string) => {
@@ -118,7 +122,7 @@ export function WhiteboardCanvas() {
     const shape = shapes.find((s) => s.id === selectedId)
     if (!shape) return
 
-    const result = computeTransformedPoints(shape, node)
+    const result = computeTransformedPoints(shape, node, scale)
 
     node.x(0)
     node.y(0)
@@ -185,7 +189,7 @@ export function WhiteboardCanvas() {
 
   const handleMouseUp = useCallback(() => {
     if (!drawingShape) return
-    if (!isClick(drawingShape.points)) {
+    if (!isClick(drawingShape.points, scale)) {
       addShape(drawingShape)
       syncSend('draw', drawingShape)
     }
@@ -311,12 +315,40 @@ export function WhiteboardCanvas() {
         ref={stageRef}
         width={size.width}
         height={size.height}
+        x={stageX}
+        y={stageY}
+        scaleX={scale}
+        scaleY={scale}
+        draggable
+        onDragEnd={(e) => {
+          const node = e.currentTarget
+          useCanvasStore.getState().setViewport(node.x(), node.y(), scale)
+        }}
+        onWheel={(e) => {
+          e.evt.preventDefault()
+          const stage = stageRef.current
+          if (!stage) return
+          const oldScale = scale
+          const pointer = stage.getPointerPosition()
+          if (!pointer) return
+          const direction = e.evt.deltaY > 0 ? -1 : 1
+          const factor = 1.05
+          const newScale = Math.min(Math.max(oldScale * (direction > 0 ? factor : 1 / factor), 0.1), 5)
+          const mousePointTo = {
+            x: (pointer.x - stageX) / oldScale,
+            y: (pointer.y - stageY) / oldScale,
+          }
+          const newX = pointer.x - mousePointTo.x * newScale
+          const newY = pointer.y - mousePointTo.y * newScale
+          useCanvasStore.getState().setViewport(newX, newY, newScale)
+        }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
         style={{ cursor: activeTool === 'text' ? 'text' : 'crosshair' }}
       >
+        <GridBackground />
         <Layer>
           {shapes.map(renderShape)}
           {renderDrawingPreview()}
@@ -329,7 +361,9 @@ export function WhiteboardCanvas() {
                 {...getTransformerConfig(selectedShape)}
               onTransformEnd={handleTransformEnd}
               boundBoxFunc={(oldBox, newBox) => {
-                if (newBox.width < 5 || newBox.height < 5) {
+                const s = scale || 1
+                const minSize = 5 / s
+                if (newBox.width < minSize || newBox.height < minSize) {
                   return oldBox
                 }
                 return newBox
@@ -369,7 +403,7 @@ export function WhiteboardCanvas() {
 
       {/* Status */}
       <div className="fixed bottom-3 left-1/2 -translate-x-1/2 text-xs text-gray-400 bg-white/60 backdrop-blur-sm px-3 py-1 rounded-full">
-        形状: {shapes.length} · Ctrl+Z 撤销 · Delete 删除
+        形状: {shapes.length} · {Math.round(scale * 100)}% · Ctrl+Z 撤销 · Delete 删除
       </div>
     </div>
   )

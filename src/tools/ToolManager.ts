@@ -45,7 +45,7 @@ export function updateShapePoints(
   }
 }
 
-export function isClick(points: number[]): boolean {
+export function isClick(points: number[], scale = 1): boolean {
   if (points.length < 4) return true
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
   for (let i = 0; i < points.length; i += 2) {
@@ -54,5 +54,6 @@ export function isClick(points: number[]): boolean {
     maxX = Math.max(maxX, points[i])
     maxY = Math.max(maxY, points[i + 1])
   }
-  return (maxX - minX) < 5 && (maxY - minY) < 5
+  const threshold = 5 / scale
+  return (maxX - minX) < threshold && (maxY - minY) < threshold
 }
