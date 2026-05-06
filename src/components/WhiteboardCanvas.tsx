@@ -136,8 +136,8 @@ export function WhiteboardCanvas() {
     e.evt.preventDefault()
     e.evt.stopPropagation()
 
-    // Middle mouse button — start panning
-    if (e.evt.button === 1) {
+    // Right mouse button (or middle) — start panning
+    if (e.evt.button === 2 || e.evt.button === 1) {
       setPanning(true)
       panStart.current = { x: e.evt.clientX, y: e.evt.clientY, stageX, stageY }
       return
@@ -473,7 +473,7 @@ export function WhiteboardCanvas() {
 
       {/* Status */}
       <div className="fixed bottom-3 left-1/2 -translate-x-1/2 text-xs text-gray-400 bg-white/60 backdrop-blur-sm px-3 py-1 rounded-full">
-        形状: {shapes.length} · {Math.round(scale * 100)}% · 中键拖拽平移 · Ctrl+Z 撤销 · Delete 删除
+        形状: {shapes.length} · {Math.round(scale * 100)}% · 右键拖拽平移 · Ctrl+Z 撤销 · Delete 删除
       </div>
     </div>
   )
