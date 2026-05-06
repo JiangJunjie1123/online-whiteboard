@@ -267,18 +267,18 @@ export interface CategoryDefinition {
 
 | # | type | 中文名 | Konva 组件 | 描述 |
 |---|------|--------|-----------|------|
-| 25 | `flow-process` | 处理/过程 | `<Rect>` | 标准矩形框 |
-| 26 | `flow-decision` | 判断/分支 | `<Line closed>` | 菱形（同 diamond） |
-| 27 | `flow-terminator` | 开始/结束 | `<Rect cornerRadius>` | 圆角矩形 |
+| 25 | `flow-process` | 处理/过程 | `<Rect>` | 标准矩形框 **[别名: rectangle]** |
+| 26 | `flow-decision` | 判断/分支 | `<Line closed>` | 菱形 **[别名: diamond]** |
+| 27 | `flow-terminator` | 开始/结束 | `<Rect cornerRadius>` | 圆角矩形 **[别名: rectangle+cornerRadius]** |
 | 28 | `flow-document` | 文档 | `<Line closed>` | 波浪底边矩形 |
-| 29 | `flow-data-io` | 数据/输入输出 | `<Line closed>` | 平行四边形 |
-| 30 | `flow-manual-input` | 手动输入 | `<Line closed>` | 梯形（顶边斜） |
+| 29 | `flow-data-io` | 数据/输入输出 | `<Line closed>` | 平行四边形 **[别名: parallelogram]** |
+| 30 | `flow-manual-input` | 手动输入 | `<Line closed>` | 梯形（顶边斜） **[别名: trapezoid]** |
 | 31 | `flow-predefined-process` | 预定义过程 | `<Rect>` + 两条侧线 | 双竖线矩形 |
-| 32 | `flow-database` | 数据库 | `<Line closed>` | 圆柱体 |
+| 32 | `flow-database` | 数据库 | `<Line closed>` | 圆柱体 **[别名: cylinder]** |
 | 33 | `flow-delay` | 延迟 | `<Line closed>` | 半圆两端 |
 | 34 | `flow-cloud` | 云/注释 | `<Shape>` (SVG) | 云形图案 |
-| 35 | `flow-connector` | 连接点 | `<Circle>` | 小圆点 |
-| 36 | `flow-off-page` | 离页引用 | `<Line closed>` | 五边形（下三角） |
+| 35 | `flow-connector` | 连接点 | `<Circle>` | 小圆点 **[别名: circle]** |
+| 36 | `flow-off-page` | 离页引用 | `<Line closed>` | 五边形（下三角） **[别名: pentagon]** |
 
 ### 5.4 UML 类图符号 (UML) — 9 种
 
@@ -290,22 +290,22 @@ export interface CategoryDefinition {
 | 40 | `enum-box` | 枚举 | `<Group>` (3 `<Rect>`) | 含 <<enumeration> |
 | 41 | `actor` | 参与者 | `<Shape>` (SVG) | 火柴人 |
 | 42 | `lifeline` | 生命线 | `<Line>` + dash | 垂直虚线 |
-| 43 | `activation-box` | 激活框 | `<Rect>` | 生命线上的窄矩形 |
-| 44 | `sync-message` | 同步消息 | `<Arrow>` | 实心箭头 |
-| 45 | `return-message` | 返回消息 | `<Arrow>` + dash | 虚线箭头 |
+| 43 | `activation-box` | 激活框 | `<Rect>` | 生命线上的窄矩形 **[别名: rectangle]** |
+| 44 | `sync-message` | 同步消息 | `<Arrow>` | 实心箭头 **[别名: arrow]** |
+| 45 | `return-message` | 返回消息 | `<Arrow>` + dash | 虚线箭头 **[别名: dashed-line]** |
 
 ### 5.5 标注与注释 (Annotation) — 8 种
 
 | # | type | 中文名 | Konva 组件 | 说明 |
 |---|------|--------|-----------|------|
 | 46 | `text` | 文本 | `<Text>` | 已有 |
-| 47 | `note-sticky` | 便签 | `<Rect fillColor>` | 黄色便签纸 |
-| 48 | `callout-rounded` | 圆角标注框 | `<Rect cornerRadius>` | 气泡对话框 |
-| 49 | `callout-ellipse` | 椭圆标注框 | `<Ellipse>` | 椭圆形气泡 |
+| 47 | `note-sticky` | 便签 | `<Rect fillColor>` | 黄色便签纸 **[别名: rectangle+fillColor]** |
+| 48 | `callout-rounded` | 圆角标注框 | `<Rect cornerRadius>` | 气泡对话框 **[别名: rectangle+cornerRadius]** |
+| 49 | `callout-ellipse` | 椭圆标注框 | `<Ellipse>` | 椭圆形气泡 **[别名: circle/ellipse]** |
 | 50 | `bracket` | 方括号 | `<Line>` | [ 形 |
 | 51 | `curly-brace` | 花括号 | `<Shape>` (SVG) | { 形 |
-| 52 | `highlight-rect` | 高亮区域 | `<Rect fillOpacity>` | 半透明背景块 |
-| 53 | `watermark` | 水印文本 | `<Text>` | 大号低透明文本 |
+| 52 | `highlight-rect` | 高亮区域 | `<Rect fillOpacity>` | 半透明背景块 **[别名: rectangle+fillOpacity]** |
+| 53 | `watermark` | 水印文本 | `<Text>` | 大号低透明文本 **[别名: text]** |
 
 ### 5.6 其他图形 (Misc) — 7 种
 
@@ -318,6 +318,51 @@ export interface CategoryDefinition {
 | 58 | `block-arrow` | 块状箭头 | `<Line closed>` | 宽体箭头 |
 | 59 | `crescent` | 月牙/扇形 | `<Shape>` (SVG) | 饼图部位 |
 | 60 | `table-grid` | 表格/网格 | `<Group>` (N个Rect) | NxM 单元格 |
+
+### 5.7 形状别名策略
+
+部分流程图/标注/UML 形状与基础形状共享完全相同的渲染器和工具逻辑，仅在 label、icon、category 和默认样式上存在差异。此类形状标注为 **[别名]**，采用如下策略：
+
+| 别名形状 | 基形状 | 差异点 |
+|----------|--------|--------|
+| `flow-process` | `rectangle` | 分类为 flowchart，不同 icon/label |
+| `flow-decision` | `diamond` | 同上 |
+| `flow-terminator` | `rectangle` (cornerRadius) | 同上，默认圆角 |
+| `flow-data-io` | `parallelogram` | 同上 |
+| `flow-manual-input` | `trapezoid` | 同上 |
+| `flow-database` | `cylinder` | 同上 |
+| `flow-connector` | `circle` | 同上，更小的默认尺寸 |
+| `flow-off-page` | `pentagon` | 同上 |
+| `activation-box` | `rectangle` | 同上，更窄的默认尺寸 |
+| `sync-message` | `arrow` | 同上 |
+| `return-message` | `dashed-line` | 同上 |
+| `note-sticky` | `rectangle` | 同上，默认黄色填充 |
+| `callout-rounded` | `rectangle` (cornerRadius) | 同上 |
+| `callout-ellipse` | `circle`/`ellipse` | 同上 |
+| `highlight-rect` | `rectangle` | 同上，默认半透明 |
+| `watermark` | `text` | 同上，默认大号低透明度 |
+
+**别名实现方式：**
+- 别名形状在其工具文件中不创建独立的渲染器/transform/updatePoints 函数
+- 通过 `registerShape` 直接引用基形状的 renderer、updatePoints、transform
+- 仅覆盖 `label`、`icon`、`category`、`defaultStyle` 字段
+- 显著减少有效代码文件数量：60 个工具条目中约 16 个为别名，实际独立文件约 44 个
+
+```typescript
+// 示例: FlowDecisionTool.tsx — 别名形状，无需重复实现
+import { shapeRegistry } from '../config/shape-registry'
+
+registerShape({
+  type: 'flow-decision',
+  label: '判断/分支',
+  icon: '💎',
+  category: 'flowchart',
+  renderer: shapeRegistry.get('diamond')!.renderer,        // 复用
+  updatePoints: shapeRegistry.get('diamond')!.updatePoints, // 复用
+  transform: shapeRegistry.get('diamond')!.transform,       // 复用
+  defaultStyle: { fill: '#EBF5FB', stroke: '#2980B9' },
+})
+```
 
 ---
 
@@ -669,6 +714,25 @@ forEach shape → canvasStore.addShape(shape)
 画布渲染所有模板形状 ✓
 ```
 
+### 8.5 模板撤销粒度
+
+Phase 1 采用**逐 shape 撤销**策略：每次 Ctrl+Z 撤销模板中的一个形状，用户需要多次撤销才能完全移除模板。此决策基于以下考量：
+
+- **简单可靠**：复用现有单 shape 撤销机制，无需新增批量撤销事务
+- **渐进式**：用户可以在模板生成后按需撤销部分节点，保留有用的部分
+- **未来扩展**：Shape 模型已预留 `groupId` 字段（所有模板生成形状共享同一个 groupId）。Phase 2 可基于此字段实现"一键撤销整个模板"，同时保留逐 shape 撤销的细粒度
+
+### 8.6 已知限制
+
+**模板连接线为静态坐标。** Phase 1 模板生成的连接线（箭头、正交连线等）的端点坐标在生成时固定。移动所连接的节点后，连接线不会自动跟随。
+
+| 限制 | 影响 | 缓解 |
+|------|------|------|
+| 连接线不跟随节点移动 | 移动节点后需手动调整连线端点 | 模板卡片 UI 显示提示文字：**"移动节点后需手动调整连线"** |
+| 仅模板生成的连接线受影响 | 用户手动绘制的连接线行为不变 | 无额外操作 |
+
+> **Phase 1 vs Phase 2 范围边界：** Phase 1 不做连接线联动（见第 9 节的连接器自动更新规划）。Phase 2 引入 `connectionData` 锚点系统后，连接线可跟随节点自动更新。当前阶段用户在模板卡片上看到明确提示，设定期望。
+
 ---
 
 ## 9. 连接器自动更新（Phase 2 规划）
@@ -908,7 +972,7 @@ class Shape(BaseModel):
 - [ ] 流程图模板：开始+过程+判断+结束+多条连线
 - [ ] 模板生成后所有形状可独立选中/编辑/移动
 - [ ] 模板生成操作能同步到其他协作用户
-- [ ] 模板生成后可撤销（一次 Ctrl+Z 撤销一个 shape，或批量撤销整个模板）
+- [ ] 模板生成后可撤销：Phase 1 采用逐 shape 撤销（每次 Ctrl+Z 撤销一个 shape）。Shape 模型已预留 `groupId` 字段，未来可通过匹配 groupId 实现批量撤销整个模板
 
 ### 13.4 兼容性
 
@@ -941,3 +1005,52 @@ class Shape(BaseModel):
 | 模板生成大量同步消息 | 低 | Phase 1 逐条发送（~15 条，10ms 内到达），后续可引入批量消息合并 |
 | 形状过多导致用户选择困难 | 中 | 分类折叠 + 搜索过滤 + 收藏/最近使用三重手段降低认知负荷 |
 | UML 类框等多节形状与当前 Transformer 兼容 | 中 | `<Group>` 包裹可让 Transformer 正确操作复合节点，需充分测试 |
+
+---
+
+## 16. 分阶段交付建议
+
+为降低单次交付风险并尽早验证核心架构，建议将 V3B 拆分为两个 Batch 分阶段交付。
+
+### 16.1 Batch 1: V3B Core（~35 形状）
+
+**范围：** 基础形状 + 箭头连线 + 流程图 + 标注注释 + Registry 架构重构 + 工具栏分类/搜索
+
+| 类别 | 形状数 | 形状 |
+|------|--------|------|
+| Basic | 14 | brush, rectangle, circle, triangle, diamond, pentagon, star, hexagon, octagon, parallelogram, trapezoid, cross, heart, line |
+| Arrows & Connectors | 10 | arrow, double-arrow, dashed-line, dotted-line, curved-arrow, orthogonal-connector, bent-arrow, self-loop-connector, connector-with-label, line-with-arrowhead |
+| Flowchart | 12 | flow-process, flow-decision, flow-terminator, flow-document, flow-data-io, flow-manual-input, flow-predefined-process, flow-database, flow-delay, flow-cloud, flow-connector, flow-off-page |
+| Annotation | (包含 text) | text (已有), note-sticky, callout-rounded, callout-ellipse, bracket, curly-brace, highlight-rect, watermark |
+
+**Batch 1 关键交付物：**
+- ShapeRegistry 架构 + 现有 10 形状迁移
+- 工具栏分层分类 + 搜索 + 收藏/最近使用
+- Basic + Arrows + Flowchart + Annotation 四类形状可绘制
+- 流程图包含大量别名形状，实现成本低
+
+### 16.2 Batch 2: V3B Extended（~25 形状 + 模板系统）
+
+**范围：** UML + Misc + 模板系统（4 个模板）
+
+| 类别 | 形状数 | 形状 |
+|------|--------|------|
+| UML | 9 | class-box, interface-box, abstract-class, enum-box, actor, lifeline, activation-box, sync-message, return-message |
+| Misc | 7 | cylinder, shield, gear, lightning, block-arrow, crescent, table-grid |
+| 模板系统 | — | 思维导图、类图、时序图、流程图 四个模板 |
+
+**Batch 2 关键交付物：**
+- UML 复合形状（class-box 等 Group 包裹的多节矩形）
+- Misc 装饰性形状（cylinder, shield, gear 等）
+- 模板注册中心 + 4 个模板生成函数
+- 模板面板 UI + 批量 addShape + groupId 预留
+
+### 16.3 拆分理由
+
+| 考量 | 说明 |
+|------|------|
+| **风险隔离** | Batch 1 验证 Registry 架构 + 工具栏重构的正确性，不依赖复合形状或模板系统 |
+| **快速反馈** | Batch 1 交付后用户即可绘制专业流程图（含 12 种流程图符号），提前获得使用反馈 |
+| **复用效应** | Batch 1 的别名形状积累了大量复用模式（renderer/transform 共享），Batch 2 的 UML/Misc 可直接沿用 |
+| **模板依赖** | 模板系统需要 UML (类图/时序图) 和 Flowchart 形状作为素材，放在 Batch 2 在形状完备后实现更自然 |
+| **并行开发** | Batch 1 和 Batch 2 的工具文件无依赖冲突，可在 Batch 1 稳定后并行推进
