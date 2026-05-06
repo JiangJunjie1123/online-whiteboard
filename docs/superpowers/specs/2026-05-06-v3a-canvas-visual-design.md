@@ -36,7 +36,14 @@ interface ViewportState {
   stageX: number;  // Stage x 偏移 (px)
   stageY: number;  // Stage y 偏移 (px)
   scale: number;   // 缩放因子 (0.1 ~ 5)
+  gridVisible: boolean;  // 网格背景可见性（默认 true）
 }
+```
+
+新增 action：
+
+```typescript
+setGridVisible: (visible: boolean) => void
 ```
 
 ### 2.3 Stage 交互
@@ -107,6 +114,7 @@ const newHeight = node.height() * node.scaleY() / scaleX;
 - Rect 填充使用 offscreen canvas 生成的 20px 点阵 pattern
 - 单个 pattern 图无限平铺，GPU 友好，不随视口变化重绘
 - Pattern: 20x20 像素 tile，中心 1.5px 半径灰点 `#d0d5dd`，背景 `#f8f9fa`
+- **可见性控制**: 组件读取 `useCanvasStore.gridVisible`，通过 Konva Layer 的 `visible` 属性控制显示/隐藏。V3D 导出功能在白色背景模式下通过设置 `gridVisible=false` 临时隐藏网格
 
 ### 3.3 形状默认样式
 
@@ -129,13 +137,13 @@ const newHeight = node.height() * node.scaleY() / scaleX;
 
 | 文件 | 职责 |
 |------|------|
-| `src/components/GridBackground.tsx` | Konva 点阵网格背景层 |
+| `src/components/GridBackground.tsx` | Konva 点阵网格背景层，通过 `useCanvasStore.gridVisible` 控制可见性 |
 
 ### 修改
 
 | 文件 | 改动 |
 |------|------|
-| `src/stores/useCanvasStore.ts` | 新增 viewport 状态 + setViewport action |
+| `src/stores/useCanvasStore.ts` | 新增 viewport 状态（含 `gridVisible`）+ setViewport / setGridVisible action |
 | `src/components/WhiteboardCanvas.tsx` | Stage draggable/缩放、getPointerPos 坐标转换、引入 GridBackground、Transformer ignoreStroke |
 | `src/tools/transformUtils.ts` | 烘焙变换除以 stage.scaleX() |
 | `src/components/RemoteCursor.tsx` | worldToScreen 坐标反算 |
@@ -157,6 +165,7 @@ const newHeight = node.height() * node.scaleY() / scaleX;
 - [ ] 用户 A 视口操作不影响用户 B
 - [ ] 蓝色调色板全局应用无遗漏
 - [ ] 矩形默认圆角 8px
+- [ ] `gridVisible=false` 时网格背景隐藏，`true` 时恢复显示
 - [ ] 回退：仅影响视口层和样式，shape 数据零影响
 
 ---
