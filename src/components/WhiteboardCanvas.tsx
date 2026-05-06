@@ -410,6 +410,10 @@ export function WhiteboardCanvas() {
         shape.points = [worldX, worldY, worldX + 100, worldY + 40]
         shape.text = '开始/结束'
         break
+      case 'connector-label':
+        shape.points = [worldX, worldY, worldX + 150, worldY + 40]
+        shape.text = 'Label'
+        break
       case 'note-sticky':
         shape.points = [worldX, worldY, worldX + 120, worldY + 100]
         break
@@ -469,12 +473,16 @@ export function WhiteboardCanvas() {
           }
           if (shapeId) {
             const shape = shapes.find(s => s.id === shapeId)
-            if (shape && shape.text !== undefined) {
-              const pos = getPointerPos()
-              setTextPos(pos)
-              setTextValue(shape.text || '')
-              setShowTextInput(true)
-              setSelectedId(shapeId)
+            if (shape) {
+              // Allow text editing for shapes that have or support text
+              const textEditableTypes = ['text', 'connector-label', 'flow-terminator', 'note-sticky', 'class-box', 'or-circle', 'callout']
+              if (shape.text !== undefined || textEditableTypes.includes(shape.type)) {
+                const pos = getPointerPos()
+                setTextPos(pos)
+                setTextValue(shape.text || '')
+                setShowTextInput(true)
+                setSelectedId(shapeId)
+              }
             }
           }
         }}
