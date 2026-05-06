@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from 'react'
-import { Stage, Layer, Line, Transformer } from 'react-konva'
+import { Stage, Layer, Line, Rect, Transformer } from 'react-konva'
 import type Konva from 'konva'
 import { useToolStore } from '../stores/useToolStore'
 import { useCanvasStore } from '../stores/useCanvasStore'
@@ -8,16 +8,8 @@ import { createShape, updateShapePoints, isClick } from '../tools/ToolManager'
 import { computeTransformedPoints } from '../tools/transformUtils'
 import { exportCanvas } from '../utils/exportCanvas'
 import { GridBackground } from './GridBackground'
-import { BrushShape } from '../tools/BrushTool'
-import { RectangleShape } from '../tools/RectangleTool'
-import { CircleShape } from '../tools/CircleTool'
-import { ArrowShape } from '../tools/ArrowTool'
-import { TextShape } from '../tools/TextTool'
-import { LineShape } from '../tools/LineTool'
-import { TriangleShape } from '../tools/TriangleTool'
-import { StarShape } from '../tools/StarTool'
-import { DiamondShape } from '../tools/DiamondTool'
-import { PentagonShape } from '../tools/PentagonTool'
+import { shapeRegistry } from '../config/shapeRegistry'
+import '../tools/registerAll' // side-effect: triggers shapeRegistry.register() for all shapes
 import { getSyncManager } from '../sync/SyncManager'
 import type { Shape, Point } from '../types'
 
@@ -91,29 +83,15 @@ export function WhiteboardCanvas() {
   }, [selectedId, shapes])
 
   const getTransformerConfig = useCallback((shape: Shape) => {
-    switch (shape.type) {
-      case 'brush':
-        return {
-          enabledAnchors: [] as string[],
-          rotateEnabled: false,
-          keepRatio: false,
-        }
-      case 'text':
-        return {
-          enabledAnchors: [] as string[],
-          rotateEnabled: true,
-          keepRatio: false,
-        }
-      default:
-        return {
-          enabledAnchors: [
-            'top-left', 'top-center', 'top-right',
-            'middle-left', 'middle-right',
-            'bottom-left', 'bottom-center', 'bottom-right',
-          ] as string[],
-          rotateEnabled: true,
-          keepRatio: false,
-        }
+    const def = shapeRegistry.get(shape.type)
+    return def?.getTransformerConfig?.(shape) ?? {
+      enabledAnchors: [
+        'top-left', 'top-center', 'top-right',
+        'middle-left', 'middle-right',
+        'bottom-left', 'bottom-center', 'bottom-right',
+      ],
+      rotateEnabled: true,
+      keepRatio: false,
     }
   }, [])
 
@@ -223,66 +201,59 @@ export function WhiteboardCanvas() {
   }, [selectedId])
 
   const renderShape = (shape: Shape) => {
-    const props = {
-      shape,
-      isSelected: shape.id === selectedId,
-      onSelect: () => handleSelectShape(shape.id),
-      shapeRef: getShapeRef(shape.id),
+    const def = shapeRegistry.get(shape.type)
+    if (def) {
+      const Comp = def.renderer
+      return (
+        <Comp
+          key={shape.id}
+          shape={shape}
+          isSelected={shape.id === selectedId}
+          onSelect={() => handleSelectShape(shape.id)}
+          shapeRef={getShapeRef(shape.id)}
+        />
+      )
     }
-    switch (shape.type) {
-      case 'brush': return <BrushShape key={shape.id} {...props} />
-      case 'rectangle': return <RectangleShape key={shape.id} {...props} />
-      case 'circle': return <CircleShape key={shape.id} {...props} />
-      case 'arrow': return <ArrowShape key={shape.id} {...props} />
-      case 'text': return <TextShape key={shape.id} {...props} />
-      case 'line': return <LineShape key={shape.id} {...props} />
-      case 'triangle': return <TriangleShape key={shape.id} {...props} />
-      case 'star': return <StarShape key={shape.id} {...props} />
-      case 'diamond': return <DiamondShape key={shape.id} {...props} />
-      case 'pentagon': return <PentagonShape key={shape.id} {...props} />
-      default: return null
-    }
+    // Fallback: render a red-tinted placeholder for unknown shape types
+    console.warn(`[WhiteboardCanvas] No renderer registered for shape type: "${shape.type}"`)
+    const [x1, y1, x2, y2] = shape.points
+    const fx = Math.min(x1 ?? 0, x2 ?? 0)
+    const fy = Math.min(y1 ?? 0, y2 ?? 0)
+    const fw = Math.abs((x2 ?? 0) - (x1 ?? 0)) || 20
+    const fh = Math.abs((y2 ?? 0) - (y1 ?? 0)) || 20
+    return (
+      <Rect
+        key={shape.id}
+        x={fx}
+        y={fy}
+        width={fw}
+        height={fh}
+        fill="rgba(255,0,0,0.25)"
+        stroke="red"
+        strokeWidth={1}
+      />
+    )
   }
 
   const renderDrawingPreview = () => {
     if (!drawingShape) return null
-    switch (drawingShape.type) {
-      case 'brush':
-        return (
-          <Line
-            points={drawingShape.points}
-            stroke={drawingShape.style.strokeColor}
-            strokeWidth={drawingShape.style.strokeWidth}
-            opacity={drawingShape.style.opacity}
-            tension={0.5}
-            lineCap="round"
-            lineJoin="round"
-          />
-        )
-      case 'line':
-      case 'rectangle':
-      case 'circle':
-      case 'arrow':
-      case 'triangle':
-      case 'star':
-      case 'diamond':
-      case 'pentagon': {
-        const shapeMap: Record<string, React.FC<{ shape: Shape }>> = {
-          line: LineShape,
-          rectangle: RectangleShape,
-          circle: CircleShape,
-          arrow: ArrowShape,
-          triangle: TriangleShape,
-          star: StarShape,
-          diamond: DiamondShape,
-          pentagon: PentagonShape,
-        }
-        const ShapeComp = shapeMap[drawingShape.type]
-        return <ShapeComp shape={drawingShape} />
-      }
-      default:
-        return null
+    const def = shapeRegistry.get(drawingShape.type)
+    if (def) {
+      const Comp = def.renderer
+      return <Comp shape={drawingShape} />
     }
+    // Fallback: draw a simple line for unknown types
+    if (drawingShape.points.length >= 4) {
+      return (
+        <Line
+          points={drawingShape.points}
+          stroke={drawingShape.style.strokeColor}
+          strokeWidth={drawingShape.style.strokeWidth}
+          opacity={drawingShape.style.opacity}
+        />
+      )
+    }
+    return null
   }
 
   // Keyboard: delete selected, Ctrl+Z undo

@@ -1,8 +1,9 @@
-import type { ToolType, Shape, ShapeStyle, Point } from '../types'
+import type { Shape, ShapeStyle, Point } from '../types'
 import { generateId } from '../stores/useCanvasStore'
+import { shapeRegistry } from '../config/shapeRegistry'
 
 export function createShape(
-  tool: ToolType,
+  tool: string,
   startPoint: Point,
   style: ShapeStyle,
   userId?: string
@@ -20,26 +21,29 @@ export function updateShapePoints(
   shape: Shape,
   currentPoint: Point
 ): number[] {
+  // V3B: Delegate to Shape Registry first
+  const def = shapeRegistry.get(shape.type)
+  if (def?.updatePoints) {
+    return def.updatePoints(shape, currentPoint)
+  }
+
+  // Fallback: legacy switch for unregistered types
   const [sx, sy] = [shape.points[0], shape.points[1]]
 
   switch (shape.type) {
     case 'brush':
       return [...shape.points, currentPoint.x, currentPoint.y]
     case 'rectangle':
-      return [sx, sy, currentPoint.x, currentPoint.y]
     case 'circle':
-      return [sx, sy, currentPoint.x, currentPoint.y]
     case 'arrow':
-      return [sx, sy, currentPoint.x, currentPoint.y]
-    case 'text':
-      return [sx, sy]
     case 'line':
-      return [sx, sy, currentPoint.x, currentPoint.y]
     case 'triangle':
     case 'diamond':
     case 'pentagon':
     case 'star':
       return [sx, sy, currentPoint.x, currentPoint.y]
+    case 'text':
+      return [sx, sy]
     default:
       return shape.points
   }
