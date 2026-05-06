@@ -23,3 +23,34 @@ import './DashedLineTool'
 import './CurvedArrowTool'
 import './NoteStickyTool'
 import './FlowTerminatorTool'
+
+// V3B Phase 2 new shapes — Flowchart
+import './DocumentTool'
+import './DatabaseTool'
+import './CloudTool'
+import './DelayTool'
+import './PredefinedProcessTool'
+import './OrCircleTool'
+
+// V3B Phase 2 new shapes — UML
+import './ClassBoxTool'
+import './ActorTool'
+import './LifelineTool'
+import './ActivationBoxTool'
+
+// V3B Phase 2 new shapes — Annotation
+import './CalloutTool'
+import './BracketTool'
+import './HighlightTool'
+
+// V3B Phase 2 new shapes — Misc
+import './CylinderTool'
+import './ShieldTool'
+import './GearTool'
+import './BlockArrowTool'
+import './TableGridTool'
+import './SignalTool'
+
+// V3B Phase 2 new shapes — Arrow variants
+import './BentArrowTool'
+import './ConnectorLabelTool'

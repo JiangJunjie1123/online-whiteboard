@@ -1,0 +1,78 @@
+import { Line } from 'react-konva'
+import type Konva from 'konva'
+import type { Shape, Point } from '../types'
+import { shapeRegistry } from '../config/shapeRegistry'
+import { computePolygonTransform } from '../tools/transformUtils'
+import { useCanvasStore } from '../stores/useCanvasStore'
+import { getSyncManager } from '../sync/SyncManager'
+
+interface GearShapeProps {
+  shape: Shape
+  isSelected?: boolean
+  onSelect?: () => void
+  shapeRef?: (node: Konva.Line | null) => void
+}
+
+export function GearShape({ shape, isSelected, onSelect, shapeRef }: GearShapeProps) {
+  const [x1, y1, x2, y2] = shape.points
+  const minX = Math.min(x1, x2), maxX = Math.max(x1, x2)
+  const minY = Math.min(y1, y2), maxY = Math.max(y1, y2)
+  const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2
+  const outerR = Math.min(maxX - minX, maxY - minY) / 2
+  const innerR = outerR * 0.55
+  const teeth = 8
+  const verts: number[] = []
+
+  // Simplified gear: alternating outer/inner points around circle
+  // Each tooth has 2 points: outer tip and inner valley
+  for (let i = 0; i < teeth * 2; i++) {
+    const angle = -Math.PI / 2 + (Math.PI * i) / teeth
+    const r = i % 2 === 0 ? outerR : innerR
+    verts.push(r * Math.cos(angle), r * Math.sin(angle))
+  }
+
+  const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
+    const node = e.target
+    const oldX = (minX + maxX) / 2
+    const oldY = (minY + maxY) / 2
+    const dx = node.x() - oldX
+    const dy = node.y() - oldY
+    if (dx === 0 && dy === 0) return
+
+    const newPoints = [x1 + dx, y1 + dy, x2 + dx, y2 + dy]
+    useCanvasStore.getState().updateShape(shape.id, { points: newPoints })
+    const sm = getSyncManager()
+    if (sm) sm.send({ type: 'operation', action: 'update', shape: { ...shape, points: newPoints } })
+  }
+
+  return (
+    <Line
+      id={shape.id}
+      ref={shapeRef}
+      x={cx}
+      y={cy}
+      points={verts}
+      closed
+      rotation={shape.rotation || 0}
+      stroke={shape.style.strokeColor}
+      strokeWidth={shape.style.strokeWidth}
+      fill={shape.style.fillColor}
+      opacity={shape.style.opacity}
+      onClick={onSelect}
+      onTap={onSelect}
+      draggable
+      onDragEnd={handleDragEnd}
+    />
+  )
+}
+
+shapeRegistry.register({
+  type: 'gear',
+  label: '齿轮',
+  icon: '⚙',
+  category: 'misc',
+  renderer: (props) => <GearShape {...props} />,
+  updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
+  defaultStyle: { fillColor: '#F3F4F6', strokeColor: '#4B5563' },
+  transform: (shape, node, stageScale) => computePolygonTransform(shape, node as Konva.Line, stageScale),
+})
