@@ -5,9 +5,9 @@ import hashlib
 import os
 import time
 import jwt
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Header, Request
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from .models import Shape, UserInfo, ClientMessage
 
 # ---- Auth helpers ----
