@@ -26,7 +26,7 @@ export default function App() {
   }
 
   return (
-    <div className="w-screen h-screen bg-gray-50 relative overflow-hidden">
+    <div className="w-screen h-screen bg-canvas-bg relative overflow-hidden">
       {!inRoom && (
         <RoomModal onEnter={handleEnterRoom} />
       )}

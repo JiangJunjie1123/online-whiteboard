@@ -7,7 +7,7 @@ export function ShapePanel() {
 
   return (
     <div className="px-3 py-3 border-b border-gray-100">
-      <h3 className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-2 px-1">
+      <h3 className="text-[10px] font-medium text-primary/50 uppercase tracking-wider mb-2 px-1">
         工具
       </h3>
       <div className="grid grid-cols-2 gap-2">
@@ -19,8 +19,8 @@ export function ShapePanel() {
               onClick={() => setTool(tool.type as ToolType)}
               className={`flex flex-col items-center gap-1.5 p-3 rounded-xl cursor-pointer border transition-all duration-150
                 ${isActive
-                  ? 'bg-gray-800 text-white shadow-md border-gray-800'
-                  : 'bg-white hover:bg-gray-50 border-gray-100 text-gray-600'
+                  ? 'bg-primary text-white shadow-md border-primary'
+                  : 'bg-surface hover:bg-primary-light/30 border-gray-100 text-primary/70'
                 }`}
             >
               <span className="text-lg">{tool.icon}</span>

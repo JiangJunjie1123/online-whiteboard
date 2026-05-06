@@ -32,9 +32,9 @@ export function Sidebar() {
     <div className="fixed left-0 top-0 h-full w-64 z-40 flex flex-col bg-white/90 backdrop-blur-sm border-r border-gray-200 shadow-lg select-none">
       {/* Header */}
       <div className="px-4 pt-4 pb-3 border-b border-gray-100">
-        <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg">
-          <span className="text-xs text-gray-500">房间</span>
-          <span className="text-sm font-mono font-medium text-gray-800 truncate">
+        <div className="flex items-center gap-2 px-3 py-2 bg-primary-light/50 rounded-lg">
+          <span className="text-xs text-primary/70">房间</span>
+          <span className="text-sm font-mono font-medium text-primary font-semibold truncate">
             {roomId || '—'}
           </span>
           <span className={`w-2 h-2 rounded-full ml-auto ${connected ? 'bg-green-400' : 'bg-red-400'}`} />
@@ -46,7 +46,7 @@ export function Sidebar() {
 
       {/* Style controls */}
       <div className="px-4 py-3 border-b border-gray-100 space-y-3">
-        <h3 className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">样式</h3>
+        <h3 className="text-[10px] font-medium text-primary/50 uppercase tracking-wider">样式</h3>
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-500 w-7">颜色</span>
           <input
@@ -64,9 +64,9 @@ export function Sidebar() {
             max={20}
             value={style.strokeWidth}
             onChange={(e) => setStrokeWidth(Number(e.target.value))}
-            className="flex-1 h-1 accent-gray-800 cursor-pointer"
+            className="flex-1 h-1 accent-primary cursor-pointer"
           />
-          <span className="text-xs text-gray-400 w-5 text-right">{style.strokeWidth}</span>
+          <span className="text-xs text-primary/50 w-5 text-right">{style.strokeWidth}</span>
         </div>
       </div>
 
@@ -75,7 +75,7 @@ export function Sidebar() {
         <button
           onClick={handleUndo}
           disabled={ownShapeCount === 0}
-          className="flex-1 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="flex-1 px-3 py-2 rounded-lg text-sm font-medium text-primary/70 hover:bg-primary-light/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
           ↩ 撤销
         </button>
@@ -94,23 +94,23 @@ export function Sidebar() {
           onClick={() => setUsersOpen(!usersOpen)}
           className="flex items-center justify-between w-full mb-2"
         >
-          <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <span className="text-xs font-medium text-primary/50 uppercase tracking-wider">
             在线 ({users.length})
           </span>
-          <span className="text-xs text-gray-400">{usersOpen ? '▼' : '▶'}</span>
+          <span className="text-xs text-primary/50">{usersOpen ? '▼' : '▶'}</span>
         </button>
         {usersOpen && (
           <div className="space-y-1">
             {users.map((user) => (
-              <div key={user.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-gray-50">
+              <div key={user.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-primary-light/20">
                 <div
                   className="w-3 h-3 rounded-full flex-shrink-0"
                   style={{ backgroundColor: user.color }}
                 />
-                <span className="text-sm text-gray-700 truncate">
+                <span className="text-sm text-primary truncate">
                   {user.name}
                   {user.id === userId && (
-                    <span className="text-xs text-gray-400 ml-1">(你)</span>
+                    <span className="text-xs text-primary/50 ml-1">(你)</span>
                   )}
                 </span>
               </div>
