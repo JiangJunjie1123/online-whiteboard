@@ -294,7 +294,7 @@ export function WhiteboardCanvas() {
   }, [selectedId, shapes, userId, removeShape, syncSend])
 
   return (
-    <div className="w-full h-full relative">
+    <div className="w-full h-full relative" style={{ touchAction: 'none' }} onContextMenu={(e) => e.preventDefault()}>
       <Stage
         ref={stageRef}
         width={size.width}
