@@ -1,4 +1,4 @@
-# V3C: 用户注册/登录系统 + 好友系统 + 房间号一键复制
+# V3C: 用户注册/登录系统 + 房间邀请链接 + 最近协作用户 + 房间号一键复制
 
 > **项目:** whiteboard-collab
 > **日期:** 2026-05-06
@@ -9,23 +9,25 @@
 
 ## 1. 概述
 
-V3C 为白板协作应用引入完整的用户身份系统（注册/登录/JWT 鉴权）、好友添加与管理、以及房间号一键复制功能。同时重构后端从纯内存存储迁移至 PostgreSQL 持久化。
+V3C 为白板协作应用引入完整的用户身份系统（注册/登录/JWT 鉴权）、房间邀请链接与最近协作用户功能、以及房间号一键复制功能。同时重构后端从纯内存存储迁移至 PostgreSQL 持久化。
 
 ### 1.1 核心改动
 
 1. **用户注册与登录** —— 邮箱 + 密码注册，JWT 双 token 鉴权
 2. **用户数据持久化** —— PostgreSQL users 表，替代当前匿名 UUID 生成
-3. **好友系统** —— 添加好友、好友列表、在线状态感知
-4. **房间号一键复制** —— Sidebar 房间号旁增加复制按钮，Clipboard API
-5. **WebSocket 鉴权集成** —— 连接时验证 JWT，拒绝未认证连接
-6. **后端 REST API 扩充** —— 注册/登录/好友 CRUD 端点
-7. **匿名用户兼容** —— 保留游客模式，功能受限但可正常绘图协作
+3. **房间邀请链接** —— Sidebar 一键复制邀请链接，任何人点击即可加入房间
+4. **最近协作用户** —— Sidebar 展示当前房间在线用户及最近协作过的人
+5. **房间号一键复制** —— Sidebar 房间号旁增加复制按钮，Clipboard API
+6. **WebSocket 鉴权集成** —— 连接时验证 JWT，拒绝未认证连接
+7. **后端 REST API 扩充** —— 注册/登录/房间邀请/用户列表端点
+8. **匿名用户兼容** —— 保留游客模式，功能受限但可正常绘图协作
 
 ### 1.2 动机
 
-- 当前用户仅输入昵称即可进入房间，无身份持久化。刷新页面后 userId 丢失，好友无法识别"同一个人"
-- 无用户系统意味着：无法添加好友、无法跨设备同步身份、无法做权限控制
+- 当前用户仅输入昵称即可进入房间，无身份持久化。刷新页面后 userId 丢失，无法跨设备同步身份
+- 无用户系统意味着：无法跨设备同步身份、无法做权限控制
 - 房间号展示在 Sidebar 但无复制功能，用户需手动选中文字复制，体验差
+- 当前邀请协作者只能口头告知房间号，缺乏便捷的一键邀请方式
 - 后端全部内存存储，服务器重启丢失所有数据
 
 ---
@@ -92,6 +94,8 @@ CREATE TABLE users (
     avatar_url  VARCHAR(500),
     oauth_provider VARCHAR(20),                -- NULL | 'google' | 'github' (预留)
     oauth_id    VARCHAR(255),                  -- 第三方用户 ID (预留)
+    password_reset_token VARCHAR(255),         -- 密码重置 token（预留，未来版本使用）
+    password_reset_expires TIMESTAMP,          -- 密码重置 token 过期时间（预留）
     is_active   BOOLEAN NOT NULL DEFAULT TRUE,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -117,23 +121,6 @@ CREATE INDEX idx_refresh_tokens_user ON refresh_tokens(user_id);
 CREATE INDEX idx_refresh_tokens_hash ON refresh_tokens(token_hash);
 
 -- ============================================================
--- 好友关系表
--- ============================================================
-CREATE TABLE friendships (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    friend_id   UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    status      VARCHAR(20) NOT NULL DEFAULT 'pending',  -- pending | accepted | blocked
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(user_id, friend_id)
-);
-
-CREATE INDEX idx_friendships_user ON friendships(user_id);
-CREATE INDEX idx_friendships_friend ON friendships(friend_id);
-CREATE INDEX idx_friendships_status ON friendships(user_id, status);
-
--- ============================================================
 -- 匿名用户会话表（游客模式兼容）
 -- ============================================================
 CREATE TABLE anonymous_sessions (
@@ -146,10 +133,23 @@ CREATE TABLE anonymous_sessions (
 );
 
 -- ============================================================
--- 现有表改造：rooms 表增加字段
+-- rooms 表（V3C 最小持久化）
 -- ============================================================
--- rooms 表从设计文档定义，当前未实际创建（后端用内存 dict）
--- 在实现时需完整创建 rooms / operations / snapshots 表
+-- rooms 表从父设计文档定义，当前后端用内存 dict 存储房间
+-- V3C 至少创建 rooms 表，在房间创建/关闭时持久化房间元数据
+-- 确保注册用户创建的房间在服务器重启后仍可被识别和加入
+-- operations 和 snapshots 表仍保留在内存存储，推迟到未来持久化阶段
+
+CREATE TABLE rooms (
+    id          VARCHAR(64) PRIMARY KEY,         -- roomId，前端生成
+    created_by  UUID REFERENCES users(id),       -- NULL 表示游客创建
+    is_active   BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    closed_at   TIMESTAMPTZ
+);
+
+-- 注意: operations 和 snapshots 表延迟到未来持久化阶段
+-- 画布操作当前仍然通过内存广播，不做 PostgreSQL 持久化
 ```
 
 ### 3.2 Pydantic Schema 定义
@@ -183,21 +183,16 @@ class UserPublic(BaseModel):
     is_anonymous: bool
     last_seen_at: datetime | None
 
-# ---- 好友 ----
-class FriendAddRequest(BaseModel):
-    email: EmailStr  # 通过邮箱搜索添加
+# ---- 房间邀请 ----
+class RoomInviteResponse(BaseModel):
+    room_id: str
+    invite_url: str  # 完整的邀请链接，包含 roomId
 
-class FriendRequest(BaseModel):
-    id: UUID
-    from_user: UserPublic
-    to_user_id: UUID
-    status: Literal["pending", "accepted", "blocked"]
-    created_at: datetime
-
-class FriendListResponse(BaseModel):
-    friends: list[UserPublic]
-    pending_sent: list[FriendRequest]     # 我发出的待处理请求
-    pending_received: list[FriendRequest] # 我收到的待处理请求
+# ---- 最近协作用户 ----
+class RecentCollaborator(BaseModel):
+    user: UserPublic
+    last_room_id: str
+    last_collaborated_at: datetime
 ```
 
 ### 3.3 TypeScript 类型扩展
@@ -219,11 +214,10 @@ export interface AuthTokens {
   expiresAt: number  // Unix timestamp ms
 }
 
-export interface FriendRequest {
-  id: string
-  fromUser: Pick<AuthUser, 'id' | 'nickname' | 'avatarUrl'>
-  status: 'pending' | 'accepted' | 'blocked'
-  createdAt: number
+export interface RecentCollaborator {
+  user: Pick<AuthUser, 'id' | 'nickname' | 'avatarUrl'>
+  lastRoomId: string
+  lastCollaboratedAt: number
 }
 
 // User 类型扩展（向后兼容）
@@ -232,8 +226,7 @@ export interface User {
   name: string
   color: string
   cursor?: { x: number; y: number } | null
-  isOnline?: boolean          // 新增：在线状态
-  isFriend?: boolean          // 新增：是否为好友
+  isOnline?: boolean          // 新增：在线状态（当前房间内）
   avatarUrl?: string | null   // 新增
 }
 ```
@@ -257,15 +250,13 @@ export interface User {
 | GET  | `/api/auth/me` | 获取当前用户信息 | Access Token |
 | PATCH | `/api/auth/me` | 更新昵称/头像 | Access Token |
 
-#### 好友模块
+#### 房间邀请 & 用户发现
 
 | 方法 | 路径 | 说明 | 鉴权 |
 |------|------|------|------|
-| GET | `/api/friends` | 获取好友列表 + 待处理请求 | Access Token |
-| POST | `/api/friends/request` | 发送好友申请（传 email） | Access Token |
-| POST | `/api/friends/accept` | 接受好友申请（传 request_id） | Access Token |
-| POST | `/api/friends/reject` | 拒绝好友申请 | Access Token |
-| DELETE | `/api/friends/{friend_id}` | 删除好友 | Access Token |
+| GET | `/api/rooms/{room_id}/invite` | 生成房间邀请链接 | Access Token |
+| GET | `/api/users/recent` | 获取最近协作用户列表 | Access Token |
+| GET | `/api/rooms/{room_id}/users` | 获取当前房间在线用户 | Access Token |
 
 #### 房间模块（现有 room.py 预留，实现时完善）
 
@@ -296,9 +287,7 @@ type ClientMessage =
   // userId 不再由客户端生成，由服务器从 token 提取
   | { type: "operation"; action: string; shape?: Shape; shapeId?: string }
   | { type: "cursor_move"; position: { x: number; y: number } }
-  | { type: "request_sync" }
-  | { type: "friend_online"; friendId: string }      // 新增（预留，当前用 user_joined 广播）
-  | { type: "friend_offline"; friendId: string };    // 新增（预留）
+  | { type: "request_sync" };
 
 // 服务器 → 客户端
 type ServerMessage =
@@ -307,9 +296,10 @@ type ServerMessage =
   | { type: "cursor_update"; userId: string; position: { x: number; y: number } }
   | { type: "user_joined"; user: User }
   | { type: "user_left"; userId: string }
-  | { type: "error"; message: string }
-  | { type: "friend_status"; friendId: string; online: boolean }; // 新增
+  | { type: "error"; message: string };
 ```
+
+**在线状态:** 通过现有 `user_joined` / `user_left` 广播感知当前房间内用户上线/离线，不涉及跨房间在线状态。用户列表中仅展示"当前在此房间中"的用户。
 
 **关键变更：** `join_room` 消息不再携带 `userId`。服务端从已验证的 JWT token 中提取 user_id，杜绝身份伪造。
 
@@ -454,23 +444,31 @@ App 启动
 │  👤 {nickname}    [退出]    │  ← 新增：用户信息行
 │─────────────────────────────│
 │  房间  a3f8b2c1    📋       │  ← 新增：📋 复制按钮
+│  📎 复制邀请链接    📋       │  ← 新增：邀请链接复制
 │  ● 已连接                   │
 │─────────────────────────────│
 │  ... 形状面板 ...           │
 │─────────────────────────────│
-│  在线 (3)                   │
-│    🟢 用户A (好友)          │  ← 新增：好友标记
+│  当前在线 (3)               │
+│    🟢 用户A                 │
 │    🟢 用户B                 │
 │    🟢 你                    │
 │─────────────────────────────│
-│  好友 (5)            [＋]   │  ← 新增：好友区域
-│    🟢 好友1 (在线)          │
-│    ⚪ 好友2 (离线)          │
-│    🟢 好友3 (在线)          │
-│    ⚪ 好友4 (离线)          │
-│    ⚪ 好友5 (离线)          │
+│  最近协作用户               │  ← 新增：基于最近共同房间
+│    用户A (上次: room_01)    │
+│    用户C (上次: room_02)    │
 └─────────────────────────────┘
 ```
+
+**邀请链接复制:**
+- 点击 "复制邀请链接" 按钮后，生成包含 `roomId` 的完整 URL（如 `https://example.com/rooms/a3f8b2c1`）
+- 任何人（包括游客）点击链接即可直接加入该房间
+- 与游客模式完全兼容，未登录用户点击链接后进入游客模式加入房间
+
+**最近协作用户:**
+- 基于当前注册用户曾参与的房间，查询与自己在同一房间中出现过的其他注册用户
+- 按最近协作时间排序，展示最近 10 位
+- 该列表仅作信息展示，无需好友关系，不展示在线状态（在线状态仅在 "当前在线" 区域通过 WebSocket 感知）
 
 ### 6.5 房间号一键复制
 
@@ -496,32 +494,27 @@ const handleCopyRoomId = async () => {
 - 点击后：✅ "已复制"（绿色，2s 后恢复）
 - 降级（非 HTTPS/不支持 Clipboard API）：显示"手动复制"提示
 
-### 6.6 添加好友流程
+### 6.6 房间邀请与协作用户流程
+
+**邀请流程:**
 
 ```
-Sidebar 好友区域 [＋]
+Sidebar "复制邀请链接" 按钮 [📎]
     │
-    ▼
-┌─────────────────────────┐
-│  添加好友                │
-│  输入对方注册邮箱        │
-│  ┌─────────────────────┐│
-│  │                     ││
-│  └─────────────────────┘│
-│  [取消]       [发送申请] │
-└─────────────────────────┘
+    ▼ 点击复制
     │
-    ▼ 发送 POST /api/friends/request
+    ├─ 成功: 显示 "邀请链接已复制" toast（2s）
+    │    链接格式: https://example.com/rooms/{roomId}
     │
-    ▼ 对方收到通知
-┌─────────────────────────┐
-│  {nickname} 请求添加你   │
-│  为好友                 │
-│  [拒绝]         [接受]  │
-└─────────────────────────┘
+    └─ 对方打开链接 → 直接加入房间
+          ├─ 已登录用户: 进入房间选择面板，已预填房间号
+          └─ 游客: 输入昵称后直接加入房间
 ```
 
-**好友申请通知：** 使用 WebSocket 推送 `friend_request` 类型消息，在前端以 toast 形式展示。同时在 `GET /api/friends` 的 `pending_received` 列表中持久化。
+**最近协作用户更新:**
+- 每当注册用户加入房间时，后端记录 `(user_id, room_id, joined_at)` 
+- `GET /api/users/recent` 查询逻辑：找出与当前用户共用过房间的所有注册用户，按最近一次共同房间的时间倒序排列
+- 该数据可通过 `room_participants` 表（或 rooms 表的参与者 JSON 字段）存储，无需专门的 friendships 表
 
 ---
 
@@ -535,9 +528,9 @@ backend/
 │   ├── api/
 │   │   ├── routes/
 │   │   │   ├── websocket.py      # 改造：JWT 鉴权
-│   │   │   ├── room.py           # 保留
+│   │   │   ├── room.py           # 改造：新增邀请链接、房间用户列表端点
 │   │   │   ├── auth.py           # 新增：注册/登录/刷新/登出
-│   │   │   └── friends.py        # 新增：好友 CRUD
+│   │   │   └── users.py          # 新增：最近协作用户列表
 │   │   └── deps.py               # 新增：依赖注入（get_current_user）
 │   ├── services/
 │   │   ├── connection.py         # 改造：JWT 用户绑定
@@ -546,28 +539,27 @@ backend/
 │   │   ├── operation.py          # 保留
 │   │   ├── persistence.py        # 保留
 │   │   ├── auth.py               # 新增：JWT 签发/验证/密码哈希
-│   │   └── friend.py             # 新增：好友业务逻辑
+│   │   └── collaborator.py       # 新增：最近协作用户查询逻辑
 │   ├── models/
 │   │   ├── database.py           # 改造：异步 SQLAlchemy 引擎
 │   │   ├── user.py               # 新增：User ORM
-│   │   ├── friendship.py         # 新增：Friendship ORM
 │   │   ├── refresh_token.py      # 新增：RefreshToken ORM
 │   │   ├── anonymous.py          # 新增：AnonymousSession ORM
-│   │   ├── room.py               # 保留
+│   │   ├── room.py               # 改造：加入 rooms 表 ORM
+│   │   ├── room_participant.py   # 新增：房间参与者记录（用于最近协作用户）
 │   │   ├── operation.py          # 保留
 │   │   └── snapshot.py           # 保留
 │   ├── schemas/
 │   │   ├── auth.py               # 新增
 │   │   ├── user.py               # 新增
-│   │   ├── friend.py             # 新增
-│   │   ├── websocket.py          # 保留
 │   │   ├── room.py               # 保留
+│   │   ├── websocket.py          # 保留
 │   │   └── operation.py          # 保留
 │   ├── core/
 │   │   ├── config.py             # 改造：添加 JWT_SECRET, JWT_ALGORITHM 等
 │   │   ├── security.py           # 新增：密码哈希、JWT 工具函数
 │   │   └── exceptions.py         # 改造：添加认证异常类
-│   └── main.py                   # 改造：注册 auth/friends 路由
+│   └── main.py                   # 改造：注册 auth/rooms/users 路由；数据库启动事件
 ├── alembic/
 │   └── versions/
 │       └── 001_user_system.py    # 新增：初始迁移
@@ -599,16 +591,18 @@ async def websocket_endpoint(ws: WebSocket, token: str | None = None):
 
 ### 7.3 内存存储 → PostgreSQL 迁移
 
-当前后端全部内存存储（`rooms: dict`），V3C 实施时需一并将 rooms/shapes/users 迁移至 PostgreSQL：
+当前后端全部内存存储（`rooms: dict`），V3C 实施时进行分层迁移：
 
-| 当前状态 | 迁移后 |
-|---------|--------|
-| `rooms: dict` | `rooms` 表 (PostgreSQL) |
-| `rooms[id]["shapes"]: dict` | `operations` 表，按 `room_id` 查询 |
-| `rooms[id]["users"]: dict` | Redis 在线用户缓存 + `users` 表持久化 |
-| `connections: dict` | Redis `room:{room_id}:connections` 集合 |
+| 当前状态 | 迁移后 | 优先级 |
+|---------|--------|--------|
+| `rooms: dict` | `rooms` 表 (PostgreSQL) — 房间元数据 | **V3C** |
+| `rooms[id]["users"]: dict` | WebSocket 在线状态（内存） + `users` 表持久化 | **V3C** |
+| `rooms[id]["shapes"]: dict` | `operations` 表，按 `room_id` 查询 | 未来版本 |
+| `connections: dict` | 内存 `room:{room_id}:connections` 集合 | 保持内存 |
 
-**过渡策略：** 第一版实现可保持内存存储用于 WebSocket 在线状态，仅将用户/好友信息写入 PostgreSQL。画布操作仍通过内存广播，后续版本逐步迁移持久化。
+**过渡策略：**
+- **V3C 最小持久化：** `rooms` 表在房间创建/关闭时写入 PostgreSQL，确保注册用户创建的房间在服务器重启后仍可被识别和加入。`users` 表完整持久化。
+- **画布操作延迟：** `operations` 和 `snapshots` 表保留在设计文档中，暂不创建。画布操作仍通过内存广播，后续版本逐步迁移持久化。
 
 ---
 
@@ -642,11 +636,11 @@ async def websocket_endpoint(ws: WebSocket, token: str | None = None):
 - XSS 防护：所有用户输入（昵称、邮箱）输出时转义
 - SQL 注入防护：使用 SQLAlchemy ORM 参数化查询
 
-### 8.5 好友系统安全
+### 8.5 邀请链接安全
 
-- 添加好友需要知道对方邮箱（不是 ID），防止用户被随意搜索
-- 好友申请 30 天内未处理自动过期
-- 屏蔽用户（status=blocked）后双方互相不可见
+- 邀请链接中的 roomId 为随机字符串，不可猜测
+- 拥有链接即可加入房间（设计意图：降低协作摩擦），不校验身份
+- 未来版本可添加房间密码保护作为可选安全加固
 
 ---
 
@@ -663,7 +657,7 @@ Phase A（V3C 实施）:
   ├─ 新增完整注册/登录系统
   ├─ 保留游客模式入口
   ├─ 游客：功能同当前（输入昵称 → 加入房间），但 session 不跨设备
-  └─ 注册用户：好友、持久化、跨设备登录
+  └─ 注册用户：邀请链接、最近协作用户、房间持久化、跨设备登录
 
 Phase B（V3C+1，未来版本）:
   ├─ 游客升级为注册用户（保留历史房间和操作）
@@ -678,12 +672,13 @@ Phase C（V3C+2，未来版本）:
 | 功能 | 游客 | 注册用户 |
 |------|------|----------|
 | 创建/加入房间 | 是 | 是 |
+| 通过邀请链接加入 | 是 | 是 |
 | 绘图协作 | 是 | 是 |
 | 光标同步 | 是 | 是 |
 | 撤销/重做 | 是 | 是 |
 | 身份跨设备持久化 | 否 | 是 |
-| 添加好友 | 否 | 是 |
-| 好友在线状态 | 否 | 是 |
+| 复制邀请链接 | 否 | 是 |
+| 查看最近协作用户 | 否 | 是 |
 | 房间历史列表 | 否 | 是（未来） |
 | 个人设置（头像/昵称） | 否 | 是 |
 
@@ -692,7 +687,7 @@ Phase C（V3C+2，未来版本）:
 - 游客的 `userId` 由服务端生成（`anon_<uuid>`），不再由客户端生成
 - 游客创建的房间 1 小时后无用户在线时自动清理
 - 注册用户创建的房间持久保留
-- 游客不能添加好友，好友区域不显示
+- 游客不能复制邀请链接或查看最近协作用户，相关 UI 区域不显示
 
 ---
 
@@ -704,24 +699,23 @@ Phase C（V3C+2，未来版本）:
 |------|------|
 | `src/components/AuthModal.tsx` | 登录/注册/游客选择面板 |
 | `src/components/RoomPanel.tsx` | 已登录用户创建/加入房间面板 |
-| `src/components/FriendList.tsx` | Sidebar 内好友列表组件 |
-| `src/components/AddFriendModal.tsx` | 添加好友弹窗 |
+| `src/components/RecentCollaborators.tsx` | Sidebar 内最近协作用户列表组件 |
 | `src/stores/useAuthStore.ts` | 认证状态管理 |
 | `src/api/httpClient.ts` | HTTP 请求封装 + token 刷新拦截 |
 | `src/api/auth.ts` | 注册/登录/刷新 API 调用 |
-| `src/api/friends.ts` | 好友 API 调用 |
+| `src/api/rooms.ts` | 房间邀请链接 API 调用 |
 | `backend/app/api/routes/auth.py` | 认证 REST 端点 |
-| `backend/app/api/routes/friends.py` | 好友 REST 端点 |
+| `backend/app/api/routes/users.py` | 最近协作用户 REST 端点 |
 | `backend/app/api/deps.py` | 依赖注入（get_current_user） |
 | `backend/app/services/auth.py` | JWT 签发/验证/密码哈希 |
-| `backend/app/services/friend.py` | 好友业务逻辑 |
+| `backend/app/services/collaborator.py` | 最近协作用户查询逻辑 |
 | `backend/app/models/user.py` | User ORM |
-| `backend/app/models/friendship.py` | Friendship ORM |
 | `backend/app/models/refresh_token.py` | RefreshToken ORM |
 | `backend/app/models/anonymous.py` | AnonymousSession ORM |
+| `backend/app/models/room_participant.py` | RoomParticipant ORM（房间参与者记录） |
 | `backend/app/schemas/auth.py` | 认证 Pydantic schemas |
 | `backend/app/schemas/user.py` | 用户 Pydantic schemas |
-| `backend/app/schemas/friend.py` | 好友 Pydantic schemas |
+| `backend/app/schemas/room.py` | 房间/邀请 Pydantic schemas |
 | `backend/app/core/security.py` | 安全工具函数 |
 | `backend/alembic/versions/001_user_system.py` | 数据库迁移 |
 
@@ -729,15 +723,16 @@ Phase C（V3C+2，未来版本）:
 
 | 文件 | 改动 |
 |------|------|
-| `src/components/Sidebar.tsx` | 添加房间号复制按钮、好友区域、用户信息行、区分登录/游客态 |
+| `src/components/Sidebar.tsx` | 添加房间号复制按钮、邀请链接复制、最近协作用户区域、用户信息行、区分登录/游客态 |
 | `src/components/RoomModal.tsx` | 保留作为游客入口；登录用户使用 RoomPanel 替代 |
 | `src/App.tsx` | 启动时检查登录态，路由到 AuthModal 或 RoomPanel |
-| `src/stores/useUserStore.ts` | 移除本地生成 userId，从 useAuthStore 获取身份；新增好友相关状态 |
+| `src/stores/useUserStore.ts` | 移除本地生成 userId，从 useAuthStore 获取身份 |
 | `src/sync/SyncManager.ts` | 连接时携带 token，适配新的 join_room 协议 |
-| `src/types/index.ts` | 新增 AuthUser, AuthTokens, FriendRequest 类型 |
-| `backend/app/main.py` | 注册 auth/friends 路由；添加数据库启动事件 |
+| `src/types/index.ts` | 新增 AuthUser, AuthTokens, RecentCollaborator 类型 |
+| `backend/app/main.py` | 注册 auth/rooms/users 路由；添加数据库启动事件 |
 | `backend/app/models/database.py` | 异步 SQLAlchemy 引擎配置 |
 | `backend/app/api/routes/websocket.py` | WebSocket JWT 鉴权；区分认证用户和游客 |
+| `backend/app/api/routes/room.py` | 改造：新增邀请链接生成、房间用户列表端点 |
 | `backend/app/core/config.py` | 新增 JWT_SECRET, DATABASE_URL 等环境变量 |
 | `backend/app/core/exceptions.py` | 新增认证异常类 |
 | `backend/requirements.txt` | 新增 bcrypt, PyJWT, asyncpg, alembic 依赖 |
@@ -757,15 +752,20 @@ Phase C（V3C+2，未来版本）:
 - [ ] 退出登录后清除 token，回到欢迎界面
 - [ ] 游客模式完整可用（输入昵称 → 创建/加入房间 → 绘图协作）
 
-### 好友系统
-- [ ] 已登录用户可通过邮箱搜索并发送好友申请
-- [ ] 收到好友申请时显示 toast 通知
-- [ ] 可接受/拒绝好友申请
-- [ ] 好友列表显示在线/离线状态（实时更新）
-- [ ] 删除好友功能正常
-- [ ] 游客不显示好友区域
-- [ ] 不能重复添加已存在的好友
-- [ ] 不能添加自己为好友
+### 房间邀请链接
+- [ ] Sidebar 中显示 "复制邀请链接" 按钮
+- [ ] 点击后生成包含 roomId 的完整邀请 URL 并复制到剪贴板
+- [ ] 复制成功后显示 "已复制" 反馈（2s）
+- [ ] 邀请链接格式为 `https://example.com/rooms/{roomId}`
+- [ ] 任何人（包括游客）点击邀请链接均可直接加入对应房间
+- [ ] 未登录用户打开链接后进入游客模式并自动填入房间号
+
+### 最近协作用户
+- [ ] Sidebar 中显示 "最近协作用户" 列表
+- [ ] 列表展示与该用户在同一房间中出现过的其他注册用户
+- [ ] 按最近协作时间排序，最多展示 10 位
+- [ ] 游客模式下不显示此区域
+- [ ] 列表仅在 Sidebar 中展示，不涉及跨房间在线状态
 
 ### 房间号一键复制
 - [ ] Sidebar 房间号旁显示复制按钮
@@ -792,10 +792,12 @@ Phase C（V3C+2，未来版本）:
 
 - OAuth 第三方登录（Google/GitHub）—— 预留字段，V3C 不实现
 - 用户头像上传 —— 仅支持 URL 形式头像
-- 忘记密码 / 邮箱验证 —— 未来版本
+- 忘记密码 / 邮箱验证 / 密码重置 —— 未来版本（users 表已预留 `password_reset_token` 和 `password_reset_expires` 字段，无需 API 端点或邮件服务）
+- 好友系统（添加/删除/申请/接受/拒绝/屏蔽）—— 以邀请链接 + 最近协作用户替代，无需 friendships 表
 - 房间权限控制（owner/editor/viewer）细化 —— 现有 docs 已设计，不在 V3C
-- 操作历史持久化到 PostgreSQL —— 已有设计，不在 V3C
+- 操作历史持久化到 PostgreSQL —— operations 和 snapshots 表延迟到未来持久化阶段，画布操作当前仅通过内存广播
 - 视口/缩放状态同步（V3A 已排除）
+- 跨房间在线状态 —— 在线状态仅通过 WebSocket `user_joined`/`user_left` 广播，仅在当前房间内有效，不涉及 Redis connection counting
 
 ---
 
