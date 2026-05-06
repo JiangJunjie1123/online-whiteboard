@@ -13,10 +13,36 @@ from .models import Shape, UserInfo, ClientMessage
 # ---- Auth helpers ----
 JWT_SECRET = 'whiteboard-dev-secret-key-2026'
 JWT_ALGORITHM = 'HS256'
-JWT_EXPIRY = 7 * 24 * 3600  # 7 days for MVP simplicity
+JWT_EXPIRY = 24 * 3600  # 24 hours
+# TODO: Upgrade to dual-token (access 15min + refresh 7d) for production
 
-# In-memory user store (temporary, before PostgreSQL)
+# In-memory user store with JSON file persistence
+USERS_FILE = os.path.join(os.path.dirname(__file__), 'users.json')
 _users: dict[str, dict] = {}  # email -> {id, email, password_hash, nickname}
+_token_blacklist: set[str] = set()  # invalidated tokens (logout)
+
+
+def _save_users():
+    """Persist user data to JSON file."""
+    try:
+        with open(USERS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(dict(_users), f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"Warning: Failed to save users: {e}")
+
+
+def _load_users():
+    """Load persisted user data from JSON file."""
+    if os.path.exists(USERS_FILE):
+        try:
+            with open(USERS_FILE, 'r', encoding='utf-8') as f:
+                _users.update(json.load(f))
+        except Exception as e:
+            print(f"Warning: Failed to load users: {e}")
+
+
+# Load persisted users at startup
+_load_users()
 
 
 def hash_password(password: str) -> str:
@@ -361,6 +387,7 @@ async def register(body: RegisterBody):
         'password_hash': password_hash,
         'nickname': nickname,
     }
+    _save_users()
 
     token = create_token(user_id, email, nickname)
     return AuthResponse(user_id=user_id, token=token, nickname=nickname)
@@ -382,6 +409,24 @@ async def login(body: LoginBody):
     return AuthResponse(user_id=user['id'], token=token, nickname=user['nickname'])
 
 
+@app.post("/api/auth/logout")
+async def logout(authorization: str = Header(None)):
+    """Invalidate the current JWT token (add to blacklist)."""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="未提供认证信息")
+
+    scheme, _, token = authorization.partition(' ')
+    if scheme.lower() != 'bearer' or not token:
+        raise HTTPException(status_code=401, detail="认证格式错误")
+
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Token无效或已过期")
+
+    _token_blacklist.add(token)
+    return {"message": "已登出"}
+
+
 @app.get("/api/auth/me", response_model=UserMeResponse)
 async def get_me(authorization: str = Header(None)):
     if not authorization:
@@ -394,6 +439,8 @@ async def get_me(authorization: str = Header(None)):
     payload = verify_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Token无效或已过期")
+    if token in _token_blacklist:
+        raise HTTPException(status_code=401, detail="Token已登出失效")
 
     return UserMeResponse(
         user_id=payload['sub'],

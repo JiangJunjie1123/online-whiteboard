@@ -1,6 +1,7 @@
 import type { ClientMessage, ServerMessage, Shape, User } from '../types'
 import { useCanvasStore } from '../stores/useCanvasStore'
 import { useUserStore } from '../stores/useUserStore'
+import { useAuthStore } from '../stores/useAuthStore'
 
 type MessageHandler = (msg: ServerMessage) => void
 
@@ -109,6 +110,13 @@ class SyncManagerClass {
         store.setUserId(msg.userId)
         store.setUsers(msg.users)
         useCanvasStore.getState().setShapes(msg.shapes)
+
+        // Sync server-assigned userId to authStore for guest users
+        // so AuthStore.userId stays consistent with UserStore.userId
+        const auth = useAuthStore.getState()
+        if (!auth.isAuthenticated && auth.userId !== msg.userId) {
+          useAuthStore.setState({ userId: msg.userId })
+        }
         break
       }
       case 'user_joined':

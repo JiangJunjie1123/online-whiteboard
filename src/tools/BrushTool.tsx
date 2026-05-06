@@ -2,6 +2,7 @@ import { Line } from 'react-konva'
 import type Konva from 'konva'
 import type { Shape, Point } from '../types'
 import { shapeRegistry } from '../config/shapeRegistry'
+import { computeBrushTransform } from '../tools/transformUtils'
 
 interface BrushShapeProps {
   shape: Shape
@@ -38,4 +39,5 @@ shapeRegistry.register({
   renderer: (props) => <BrushShape {...props} />,
   updatePoints: (shape: Shape, pt: Point) => [...shape.points, pt.x, pt.y],
   getTransformerConfig: () => ({ enabledAnchors: [], rotateEnabled: false, keepRatio: false }),
+  transform: (shape, node, stageScale) => computeBrushTransform(shape, node as Konva.Line, stageScale),
 })

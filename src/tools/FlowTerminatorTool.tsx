@@ -2,6 +2,7 @@ import { Rect } from 'react-konva'
 import type Konva from 'konva'
 import type { Shape, Point } from '../types'
 import { shapeRegistry } from '../config/shapeRegistry'
+import { computeRectTransform } from '../tools/transformUtils'
 
 interface FlowTerminatorShapeProps {
   shape: Shape
@@ -45,4 +46,5 @@ shapeRegistry.register({
   renderer: (props) => <FlowTerminatorShape {...props} />,
   updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
   defaultStyle: { fillColor: '#EBF5FB', strokeColor: '#2980B9' },
+  transform: (shape, node, stageScale) => computeRectTransform(shape, node as Konva.Rect, stageScale),
 })

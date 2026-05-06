@@ -2,6 +2,7 @@ import { Rect } from 'react-konva'
 import type Konva from 'konva'
 import type { Shape, Point } from '../types'
 import { shapeRegistry } from '../config/shapeRegistry'
+import { computeTextTransform } from '../tools/transformUtils'
 
 interface NoteStickyShapeProps {
   shape: Shape
@@ -50,4 +51,5 @@ shapeRegistry.register({
   renderer: (props) => <NoteStickyShape {...props} />,
   updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
   defaultStyle: { strokeColor: '#D4A017', strokeWidth: 1, fillColor: '#FFF9C4', opacity: 0.9 },
+  transform: (shape, node, stageScale) => computeTextTransform(shape, node as Konva.Text, stageScale),
 })

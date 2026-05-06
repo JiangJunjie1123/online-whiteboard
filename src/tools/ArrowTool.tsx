@@ -2,6 +2,7 @@ import { Arrow } from 'react-konva'
 import type Konva from 'konva'
 import type { Shape, Point } from '../types'
 import { shapeRegistry } from '../config/shapeRegistry'
+import { computeArrowTransform } from '../tools/transformUtils'
 
 interface ArrowShapeProps {
   shape: Shape
@@ -44,4 +45,5 @@ shapeRegistry.register({
   category: 'arrow',
   renderer: (props) => <ArrowShape {...props} />,
   updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
+  transform: (shape, node, stageScale) => computeArrowTransform(shape, node as Konva.Arrow, stageScale),
 })

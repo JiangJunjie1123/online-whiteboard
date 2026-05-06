@@ -1,6 +1,7 @@
 import type { Shape, Point, ShapeStyle } from '../types'
 import type Konva from 'konva'
 import type React from 'react'
+import type { TransformResult } from '../tools/transformUtils'
 
 export interface ShapeRendererProps {
   shape: Shape
@@ -23,6 +24,7 @@ export interface ShapeDefinition {
   renderer: React.FC<ShapeRendererProps>
   updatePoints: (shape: Shape, currentPoint: Point) => number[]
   getTransformerConfig?: (shape: Shape) => TransformerConfig
+  transform?: (shape: Shape, node: Konva.Node, stageScale?: number) => TransformResult
   defaultStyle?: Partial<ShapeStyle>
 }
 

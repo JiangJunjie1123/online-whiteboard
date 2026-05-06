@@ -33,8 +33,11 @@ export function RoomModal({ onEnter }: RoomModalProps) {
     if (authStore.isAuthenticated && authStore.userId) {
       userId = authStore.userId
     } else {
-      userId = 'user_' + crypto.randomUUID()
-      useAuthStore.getState().setGuest(userId, userName.trim())
+      // Guest: generate a temporary client-side userId for the join_room message
+      // The backend assigns the real userId (anon_<uuid>), which SyncManager
+      // will sync back to both userStore and authStore on room_state response
+      userId = 'guest_' + crypto.randomUUID()
+      useAuthStore.setState({ isAuthenticated: false, userId: null, userName: userName.trim(), token: null })
     }
 
     sm.joinRoom(mode === 'join' ? roomId.trim() : undefined, userId, userName.trim())

@@ -2,6 +2,7 @@ import { Rect } from 'react-konva'
 import type Konva from 'konva'
 import type { Shape, Point } from '../types'
 import { shapeRegistry } from '../config/shapeRegistry'
+import { computeRectTransform } from '../tools/transformUtils'
 
 interface RectShapeProps {
   shape: Shape
@@ -44,4 +45,5 @@ shapeRegistry.register({
   category: 'basic',
   renderer: (props) => <RectangleShape {...props} />,
   updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
+  transform: (shape, node, stageScale) => computeRectTransform(shape, node as Konva.Rect, stageScale),
 })

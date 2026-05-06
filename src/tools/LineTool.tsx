@@ -2,6 +2,7 @@ import { Line } from 'react-konva'
 import type Konva from 'konva'
 import type { Shape, Point } from '../types'
 import { shapeRegistry } from '../config/shapeRegistry'
+import { computePolygonTransform } from '../tools/transformUtils'
 
 interface LineShapeProps {
   shape: Shape
@@ -40,4 +41,5 @@ shapeRegistry.register({
   category: 'basic',
   renderer: (props) => <LineShape {...props} />,
   updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
+  transform: (shape, node, stageScale) => computePolygonTransform(shape, node as Konva.Line, stageScale),
 })

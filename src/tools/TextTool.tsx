@@ -2,6 +2,7 @@ import { Text } from 'react-konva'
 import type Konva from 'konva'
 import type { Shape, Point } from '../types'
 import { shapeRegistry } from '../config/shapeRegistry'
+import { computeTextTransform } from '../tools/transformUtils'
 
 interface TextShapeProps {
   shape: Shape
@@ -36,4 +37,5 @@ shapeRegistry.register({
   renderer: (props) => <TextShape {...props} />,
   updatePoints: (_shape: Shape, _pt: Point) => [_shape.points[0], _shape.points[1]],
   getTransformerConfig: () => ({ enabledAnchors: [], rotateEnabled: true, keepRatio: false }),
+  transform: (shape, node, stageScale) => computeTextTransform(shape, node as Konva.Text, stageScale),
 })

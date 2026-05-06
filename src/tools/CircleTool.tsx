@@ -2,6 +2,7 @@ import { Ellipse } from 'react-konva'
 import type Konva from 'konva'
 import type { Shape, Point } from '../types'
 import { shapeRegistry } from '../config/shapeRegistry'
+import { computeCircleTransform } from '../tools/transformUtils'
 
 interface CircleShapeProps {
   shape: Shape
@@ -43,4 +44,5 @@ shapeRegistry.register({
   category: 'basic',
   renderer: (props) => <CircleShape {...props} />,
   updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
+  transform: (shape, node, stageScale) => computeCircleTransform(shape, node as Konva.Ellipse, stageScale),
 })
