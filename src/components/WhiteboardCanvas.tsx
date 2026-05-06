@@ -136,8 +136,8 @@ export function WhiteboardCanvas() {
     e.evt.preventDefault()
     e.evt.stopPropagation()
 
-    // Right mouse button (or middle) — start panning
-    if (e.evt.button === 2 || e.evt.button === 1) {
+    // Middle mouse button — start panning
+    if (e.evt.button === 1) {
       setPanning(true)
       panStart.current = { x: e.evt.clientX, y: e.evt.clientY, stageX, stageY }
       return

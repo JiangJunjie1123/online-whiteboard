@@ -3,6 +3,8 @@ import type Konva from 'konva'
 import type { Shape, Point } from '../types'
 import { shapeRegistry } from '../config/shapeRegistry'
 import { computePolygonTransform } from '../tools/transformUtils'
+import { useCanvasStore } from '../stores/useCanvasStore'
+import { getSyncManager } from '../sync/SyncManager'
 
 interface DiamondShapeProps {
   shape: Shape
@@ -19,6 +21,20 @@ export function DiamondShape({ shape, isSelected, onSelect, shapeRef }: DiamondS
   const verts = [midX, minY, maxX, midY, midX, maxY, minX, midY]
   const cx = midX, cy = midY
 
+  const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
+    const node = e.target
+    const oldX = (minX + maxX) / 2
+    const oldY = (minY + maxY) / 2
+    const dx = node.x() - oldX
+    const dy = node.y() - oldY
+    if (dx === 0 && dy === 0) return
+
+    const newPoints = [x1 + dx, y1 + dy, x2 + dx, y2 + dy]
+    useCanvasStore.getState().updateShape(shape.id, { points: newPoints })
+    const sm = getSyncManager()
+    if (sm) sm.send({ type: 'operation', action: 'update', shape: { ...shape, points: newPoints } })
+  }
+
   return (
     <Line
       id={shape.id}
@@ -34,6 +50,8 @@ export function DiamondShape({ shape, isSelected, onSelect, shapeRef }: DiamondS
       opacity={shape.style.opacity}
       onClick={onSelect}
       onTap={onSelect}
+      draggable
+      onDragEnd={handleDragEnd}
     />
   )
 }

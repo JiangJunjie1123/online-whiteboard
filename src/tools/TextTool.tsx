@@ -3,6 +3,8 @@ import type Konva from 'konva'
 import type { Shape, Point } from '../types'
 import { shapeRegistry } from '../config/shapeRegistry'
 import { computeTextTransform } from '../tools/transformUtils'
+import { useCanvasStore } from '../stores/useCanvasStore'
+import { getSyncManager } from '../sync/SyncManager'
 
 interface TextShapeProps {
   shape: Shape
@@ -12,6 +14,20 @@ interface TextShapeProps {
 }
 
 export function TextShape({ shape, isSelected, onSelect, shapeRef }: TextShapeProps) {
+  const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
+    const node = e.target
+    const oldX = shape.points[0]
+    const oldY = shape.points[1]
+    const dx = node.x() - oldX
+    const dy = node.y() - oldY
+    if (dx === 0 && dy === 0) return
+
+    const newPoints = [oldX + dx, oldY + dy]
+    useCanvasStore.getState().updateShape(shape.id, { points: newPoints })
+    const sm = getSyncManager()
+    if (sm) sm.send({ type: 'operation', action: 'update', shape: { ...shape, points: newPoints } })
+  }
+
   return (
     <Text
       id={shape.id}
@@ -25,6 +41,8 @@ export function TextShape({ shape, isSelected, onSelect, shapeRef }: TextShapePr
       rotation={shape.rotation || 0}
       onClick={onSelect}
       onTap={onSelect}
+      draggable
+      onDragEnd={handleDragEnd}
     />
   )
 }

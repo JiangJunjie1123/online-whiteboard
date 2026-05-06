@@ -3,6 +3,8 @@ import type Konva from 'konva'
 import type { Shape, Point } from '../types'
 import { shapeRegistry } from '../config/shapeRegistry'
 import { computeCircleTransform } from '../tools/transformUtils'
+import { useCanvasStore } from '../stores/useCanvasStore'
+import { getSyncManager } from '../sync/SyncManager'
 
 interface CircleShapeProps {
   shape: Shape
@@ -17,6 +19,20 @@ export function CircleShape({ shape, isSelected, onSelect, shapeRef }: CircleSha
   const cy = (y1 + y2) / 2
   const rx = Math.abs(x2 - x1) / 2
   const ry = Math.abs(y2 - y1) / 2
+
+  const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
+    const node = e.target
+    const oldX = (x1 + x2) / 2
+    const oldY = (y1 + y2) / 2
+    const dx = node.x() - oldX
+    const dy = node.y() - oldY
+    if (dx === 0 && dy === 0) return
+
+    const newPoints = [x1 + dx, y1 + dy, x2 + dx, y2 + dy]
+    useCanvasStore.getState().updateShape(shape.id, { points: newPoints })
+    const sm = getSyncManager()
+    if (sm) sm.send({ type: 'operation', action: 'update', shape: { ...shape, points: newPoints } })
+  }
 
   return (
     <Ellipse
@@ -33,6 +49,8 @@ export function CircleShape({ shape, isSelected, onSelect, shapeRef }: CircleSha
       opacity={shape.style.opacity}
       onClick={onSelect}
       onTap={onSelect}
+      draggable
+      onDragEnd={handleDragEnd}
     />
   )
 }

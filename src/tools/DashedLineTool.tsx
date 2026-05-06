@@ -3,6 +3,8 @@ import type Konva from 'konva'
 import type { Shape, Point } from '../types'
 import { shapeRegistry } from '../config/shapeRegistry'
 import { computeArrowTransform } from '../tools/transformUtils'
+import { useCanvasStore } from '../stores/useCanvasStore'
+import { getSyncManager } from '../sync/SyncManager'
 
 interface DashedLineShapeProps {
   shape: Shape
@@ -15,6 +17,20 @@ export function DashedLineShape({ shape, isSelected, onSelect, shapeRef }: Dashe
   const [x1, y1, x2, y2] = shape.points
   const cx = (x1 + x2) / 2
   const cy = (y1 + y2) / 2
+
+  const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
+    const node = e.target
+    const oldX = (x1 + x2) / 2
+    const oldY = (y1 + y2) / 2
+    const dx = node.x() - oldX
+    const dy = node.y() - oldY
+    if (dx === 0 && dy === 0) return
+
+    const newPoints = [x1 + dx, y1 + dy, x2 + dx, y2 + dy]
+    useCanvasStore.getState().updateShape(shape.id, { points: newPoints })
+    const sm = getSyncManager()
+    if (sm) sm.send({ type: 'operation', action: 'update', shape: { ...shape, points: newPoints } })
+  }
 
   return (
     <Line
@@ -31,6 +47,8 @@ export function DashedLineShape({ shape, isSelected, onSelect, shapeRef }: Dashe
       onClick={onSelect}
       onTap={onSelect}
       hitStrokeWidth={shape.style.strokeWidth + 10}
+      draggable
+      onDragEnd={handleDragEnd}
     />
   )
 }

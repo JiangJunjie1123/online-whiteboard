@@ -3,6 +3,8 @@ import type Konva from 'konva'
 import type { Shape, Point } from '../types'
 import { shapeRegistry } from '../config/shapeRegistry'
 import { computeRectTransform } from '../tools/transformUtils'
+import { useCanvasStore } from '../stores/useCanvasStore'
+import { getSyncManager } from '../sync/SyncManager'
 
 interface FlowTerminatorShapeProps {
   shape: Shape
@@ -17,6 +19,20 @@ export function FlowTerminatorShape({ shape, isSelected, onSelect, shapeRef }: F
   const y = Math.min(y1, y2)
   const width = Math.abs(x2 - x1)
   const height = Math.abs(y2 - y1)
+
+  const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
+    const node = e.target
+    const oldX = Math.min(x1, x2)
+    const oldY = Math.min(y1, y2)
+    const dx = node.x() - oldX
+    const dy = node.y() - oldY
+    if (dx === 0 && dy === 0) return
+
+    const newPoints = [x1 + dx, y1 + dy, x2 + dx, y2 + dy]
+    useCanvasStore.getState().updateShape(shape.id, { points: newPoints })
+    const sm = getSyncManager()
+    if (sm) sm.send({ type: 'operation', action: 'update', shape: { ...shape, points: newPoints } })
+  }
 
   return (
     <Rect
@@ -34,6 +50,8 @@ export function FlowTerminatorShape({ shape, isSelected, onSelect, shapeRef }: F
       opacity={shape.style.opacity}
       onClick={onSelect}
       onTap={onSelect}
+      draggable
+      onDragEnd={handleDragEnd}
     />
   )
 }

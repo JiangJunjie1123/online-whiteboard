@@ -3,6 +3,8 @@ import type Konva from 'konva'
 import type { Shape, Point } from '../types'
 import { shapeRegistry } from '../config/shapeRegistry'
 import { computeBrushTransform } from '../tools/transformUtils'
+import { useCanvasStore } from '../stores/useCanvasStore'
+import { getSyncManager } from '../sync/SyncManager'
 
 interface BrushShapeProps {
   shape: Shape
@@ -12,6 +14,24 @@ interface BrushShapeProps {
 }
 
 export function BrushShape({ shape, isSelected, onSelect, shapeRef }: BrushShapeProps) {
+  const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
+    const node = e.target
+    const dx = node.x()
+    const dy = node.y()
+    if (dx === 0 && dy === 0) return
+    node.x(0)
+    node.y(0)
+
+    const newPoints = [...shape.points]
+    for (let i = 0; i < newPoints.length; i += 2) {
+      newPoints[i] += dx
+      newPoints[i + 1] += dy
+    }
+    useCanvasStore.getState().updateShape(shape.id, { points: newPoints })
+    const sm = getSyncManager()
+    if (sm) sm.send({ type: 'operation', action: 'update', shape: { ...shape, points: newPoints } })
+  }
+
   return (
     <Line
       id={shape.id}
@@ -27,6 +47,8 @@ export function BrushShape({ shape, isSelected, onSelect, shapeRef }: BrushShape
       onClick={onSelect}
       onTap={onSelect}
       hitStrokeWidth={shape.style.strokeWidth + 10}
+      draggable
+      onDragEnd={handleDragEnd}
     />
   )
 }
