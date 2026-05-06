@@ -50,9 +50,9 @@ export function Sidebar() {
   }
 
   return (
-    <div className="fixed left-0 top-0 h-full w-64 z-40 flex flex-col bg-white/90 backdrop-blur-sm border-r border-gray-200 shadow-lg select-none">
+    <div className="fixed left-0 top-0 h-full w-64 z-40 flex flex-col bg-white/90 backdrop-blur-sm border-r border-gray-200 shadow-lg select-none overflow-y-auto">
       {/* Header */}
-      <div className="px-4 pt-4 pb-3 border-b border-gray-100">
+      <div className="px-4 pt-4 pb-3 border-b border-gray-100 flex-shrink-0">
         <div className="flex items-center gap-2 px-3 py-2 bg-primary-light/50 rounded-lg">
           <span className="text-xs text-primary/70">房间</span>
           <span className="text-sm font-mono font-medium text-primary font-semibold truncate">
@@ -79,18 +79,29 @@ export function Sidebar() {
       </div>
 
       {/* Shape panel */}
-      <ShapePanel />
+      <div className="flex-shrink-0">
+        <ShapePanel />
+      </div>
 
       {/* Style controls */}
-      <div className="px-4 py-3 border-b border-gray-100 space-y-3">
+      <div className="px-4 py-3 border-b border-gray-100 space-y-3 flex-shrink-0">
         <h3 className="text-[10px] font-medium text-primary/50 uppercase tracking-wider">样式</h3>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs text-gray-500 w-7">颜色</span>
+          {['#1A73E8', '#E53935', '#43A047', '#FB8C00', '#8E24AA', '#00ACC1', '#212121', '#757575'].map((c) => (
+            <button
+              key={c}
+              onClick={() => setColor(c)}
+              className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${style.strokeColor === c ? 'border-gray-800 scale-110 ring-2 ring-offset-1 ring-gray-400' : 'border-gray-300'}`}
+              style={{ backgroundColor: c }}
+              title={c}
+            />
+          ))}
           <input
             type="color"
             value={style.strokeColor}
             onChange={(e) => setColor(e.target.value)}
-            className="w-7 h-7 rounded cursor-pointer border border-gray-300"
+            className="w-6 h-6 rounded cursor-pointer border border-gray-300"
           />
         </div>
         <div className="flex items-center gap-2">

@@ -130,6 +130,10 @@ export function WhiteboardCanvas() {
   }, [selectedId, shapes, syncSend])
 
   const handleMouseDown = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
+    // Prevent browser back/forward navigation on mouse buttons 3/4
+    e.evt.preventDefault()
+    e.evt.stopPropagation()
+
     // Click on empty canvas area
     if (e.target === e.target.getStage()) {
       setSelectedId(null)

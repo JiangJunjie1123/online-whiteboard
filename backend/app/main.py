@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from .models import Shape, UserInfo, ClientMessage
 
 # ---- Auth helpers ----
-JWT_SECRET = 'whiteboard-dev-secret-key-2026'
+JWT_SECRET = 'whiteboard-dev-secret-key-2026-v3c'
 JWT_ALGORITHM = 'HS256'
 JWT_EXPIRY = 24 * 3600  # 24 hours
 # TODO: Upgrade to dual-token (access 15min + refresh 7d) for production
