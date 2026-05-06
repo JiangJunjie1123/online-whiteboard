@@ -49,7 +49,7 @@ export type ServerMessage =
 
 // Client -> Server messages
 export type ClientMessage =
-  | { type: 'join_room'; roomId?: string; userName: string }
+  | { type: 'join_room'; roomId?: string; userId: string; userName: string }
   | { type: 'operation'; action: string; shape?: Shape; shapeId?: string }
   | { type: 'cursor_move'; position: { x: number; y: number } }
   | { type: 'request_sync' }

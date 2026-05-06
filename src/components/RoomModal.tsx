@@ -27,7 +27,8 @@ export function RoomModal({ onEnter }: RoomModalProps) {
       return
     }
 
-    sm.joinRoom(mode === 'join' ? roomId.trim() : undefined, userName.trim())
+    const userId = 'user_' + crypto.randomUUID()
+    sm.joinRoom(mode === 'join' ? roomId.trim() : undefined, userId, userName.trim())
     onEnter()
   }
 

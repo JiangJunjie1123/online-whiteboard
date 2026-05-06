@@ -10,7 +10,7 @@ class SyncManagerClass {
   private reconnectTimer: number | null = null
   private handlers: MessageHandler[] = []
   private destroyed = false
-  private pendingJoin: { roomId?: string; userName: string } | null = null
+  private pendingJoin: { roomId?: string; userId: string; userName: string } | null = null
 
   constructor(url: string) {
     this.url = url
@@ -36,6 +36,7 @@ class SyncManagerClass {
         this.send({
           type: 'join_room',
           roomId: this.pendingJoin.roomId,
+          userId: this.pendingJoin.userId,
           userName: this.pendingJoin.userName,
         })
       }
@@ -88,9 +89,9 @@ class SyncManagerClass {
     }
   }
 
-  joinRoom(roomId: string | undefined, userName: string) {
-    this.pendingJoin = { roomId, userName }
-    this.send({ type: 'join_room', roomId, userName })
+  joinRoom(roomId: string | undefined, userId: string, userName: string) {
+    this.pendingJoin = { roomId, userId, userName }
+    this.send({ type: 'join_room', roomId, userId, userName })
   }
 
   onMessage(handler: MessageHandler) {
