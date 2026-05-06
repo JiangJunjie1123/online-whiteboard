@@ -1,10 +1,86 @@
 import json
 import uuid
 import random
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+import hashlib
+import os
+import time
+import jwt
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, EmailStr
 from .models import Shape, UserInfo, ClientMessage
 
+# ---- Auth helpers ----
+JWT_SECRET = 'whiteboard-dev-secret-key-2026'
+JWT_ALGORITHM = 'HS256'
+JWT_EXPIRY = 7 * 24 * 3600  # 7 days for MVP simplicity
+
+# In-memory user store (temporary, before PostgreSQL)
+_users: dict[str, dict] = {}  # email -> {id, email, password_hash, nickname}
+
+
+def hash_password(password: str) -> str:
+    salt = os.urandom(32)
+    key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
+    return salt.hex() + ':' + key.hex()
+
+
+def verify_password(password: str, stored: str) -> bool:
+    salt_hex, key_hex = stored.split(':')
+    salt = bytes.fromhex(salt_hex)
+    expected_key = bytes.fromhex(key_hex)
+    new_key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
+    return new_key == expected_key
+
+
+def create_token(user_id: str, email: str, nickname: str) -> str:
+    now = int(time.time())
+    payload = {
+        'sub': user_id,
+        'email': email,
+        'nickname': nickname,
+        'iat': now,
+        'exp': now + JWT_EXPIRY,
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+
+def verify_token(token: str) -> dict | None:
+    try:
+        return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError, Exception):
+        return None
+
+
+# Track auth info per WebSocket connection
+_auth_info: dict[str, dict] = {}  # conn_id -> {userId, email, nickname}
+
+
+# ---- Auth Pydantic models ----
+class RegisterBody(BaseModel):
+    email: str
+    password: str
+    nickname: str
+
+
+class LoginBody(BaseModel):
+    email: str
+    password: str
+
+
+class AuthResponse(BaseModel):
+    user_id: str
+    token: str
+    nickname: str
+
+
+class UserMeResponse(BaseModel):
+    user_id: str
+    email: str
+    nickname: str
+
+
+# ---- App ----
 app = FastAPI(title="Whiteboard Collab")
 
 app.add_middleware(
@@ -70,7 +146,15 @@ async def handle_join_room(ws: WebSocket, data: ClientMessage, conn_id: str):
 
     room = rooms[room_id]
     user_color = get_user_color(room_id)
-    user_id = str(uuid.uuid4())[:8]
+
+    # Use auth userId if available, otherwise generate guest ID
+    auth = _auth_info.get(conn_id)
+    if auth:
+        user_id = auth['userId']
+        if not data.userName:
+            user_name = auth.get('nickname', user_name)
+    else:
+        user_id = f"anon_{uuid.uuid4().hex[:8]}"
 
     user_info = UserInfo(id=user_id, name=user_name, color=user_color)
     room["users"][user_id] = user_info
@@ -180,6 +264,7 @@ async def handle_request_sync(ws: WebSocket, data: ClientMessage, conn_id: str):
 
 async def handle_disconnect(conn_id: str):
     """Clean up when a user disconnects."""
+    _auth_info.pop(conn_id, None)
     conn = connections.pop(conn_id, None)
     if not conn:
         return
@@ -201,9 +286,19 @@ async def handle_disconnect(conn_id: str):
 
 
 @app.websocket("/ws")
-async def websocket_endpoint(ws: WebSocket):
+async def websocket_endpoint(ws: WebSocket, token: str = None):
     await ws.accept()
     conn_id = str(uuid.uuid4())
+
+    # Verify JWT token if provided
+    if token:
+        payload = verify_token(token)
+        if payload:
+            _auth_info[conn_id] = {
+                'userId': payload['sub'],
+                'email': payload.get('email', ''),
+                'nickname': payload.get('nickname', ''),
+            }
 
     try:
         while True:
@@ -232,3 +327,76 @@ async def websocket_endpoint(ws: WebSocket):
         print(f"Error: {e}")
     finally:
         await handle_disconnect(conn_id)
+
+
+# ============================================================
+#  Auth REST Endpoints
+# ============================================================
+
+@app.post("/api/auth/register", response_model=AuthResponse)
+async def register(body: RegisterBody):
+    email = body.email.strip().lower()
+    nickname = body.nickname.strip()
+    password = body.password
+
+    # Validation
+    if not email or '@' not in email:
+        raise HTTPException(status_code=400, detail="邮箱格式不正确")
+    if len(password) < 6:
+        raise HTTPException(status_code=400, detail="密码至少6位")
+    if not nickname:
+        raise HTTPException(status_code=400, detail="昵称不能为空")
+    if len(nickname) > 50:
+        raise HTTPException(status_code=400, detail="昵称最长50个字符")
+
+    if email in _users:
+        raise HTTPException(status_code=400, detail="该邮箱已注册")
+
+    user_id = str(uuid.uuid4())
+    password_hash = hash_password(password)
+
+    _users[email] = {
+        'id': user_id,
+        'email': email,
+        'password_hash': password_hash,
+        'nickname': nickname,
+    }
+
+    token = create_token(user_id, email, nickname)
+    return AuthResponse(user_id=user_id, token=token, nickname=nickname)
+
+
+@app.post("/api/auth/login", response_model=AuthResponse)
+async def login(body: LoginBody):
+    email = body.email.strip().lower()
+    password = body.password
+
+    user = _users.get(email)
+    if not user:
+        raise HTTPException(status_code=401, detail="邮箱或密码错误")
+
+    if not verify_password(password, user['password_hash']):
+        raise HTTPException(status_code=401, detail="邮箱或密码错误")
+
+    token = create_token(user['id'], user['email'], user['nickname'])
+    return AuthResponse(user_id=user['id'], token=token, nickname=user['nickname'])
+
+
+@app.get("/api/auth/me", response_model=UserMeResponse)
+async def get_me(authorization: str = Header(None)):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="未提供认证信息")
+
+    scheme, _, token = authorization.partition(' ')
+    if scheme.lower() != 'bearer' or not token:
+        raise HTTPException(status_code=401, detail="认证格式错误")
+
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Token无效或已过期")
+
+    return UserMeResponse(
+        user_id=payload['sub'],
+        email=payload.get('email', ''),
+        nickname=payload.get('nickname', ''),
+    )
