@@ -14,9 +14,9 @@ interface ToolState {
 export const useToolStore = create<ToolState>((set) => ({
   activeTool: 'brush',
   style: {
-    strokeColor: '#1a1a1a',
-    strokeWidth: 3,
-    fillColor: 'transparent',
+    strokeColor: '#1A73E8',
+    strokeWidth: 2,
+    fillColor: '#e8f0fe',
     opacity: 1,
   },
   setTool: (tool) => set({ activeTool: tool }),

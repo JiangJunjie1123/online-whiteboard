@@ -25,6 +25,7 @@ export function RectangleShape({ shape, isSelected, onSelect, shapeRef }: RectSh
       width={width || 1}
       height={height || 1}
       rotation={shape.rotation || 0}
+      cornerRadius={8}
       stroke={shape.style.strokeColor}
       strokeWidth={shape.style.strokeWidth}
       fill={shape.style.fillColor}

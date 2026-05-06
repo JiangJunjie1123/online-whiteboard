@@ -3,11 +3,15 @@ import type { Shape } from '../types'
 
 interface CanvasState {
   shapes: Shape[]
+  stageX: number
+  stageY: number
+  scale: number
   setShapes: (shapes: Shape[]) => void
   addShape: (shape: Shape, remote?: boolean) => void
   updateShape: (id: string, partial: Partial<Shape>, remote?: boolean) => void
   removeShape: (id: string, remote?: boolean) => void
   clearCanvas: (remote?: boolean) => void
+  setViewport: (x: number, y: number, scale: number) => void
   /** Undo: remove the last shape created by `userId`. Returns the removed shapeId or null. */
   undoOwn: (userId: string) => string | null
 }
@@ -17,6 +21,11 @@ export const generateId = (): string => `shape_${Date.now()}_${++idCounter}`
 
 export const useCanvasStore = create<CanvasState>((set, get) => ({
   shapes: [],
+  stageX: 0,
+  stageY: 0,
+  scale: 1,
+
+  setViewport: (x, y, scale) => set({ stageX: x, stageY: y, scale }),
 
   setShapes: (shapes) => set({ shapes }),
 
