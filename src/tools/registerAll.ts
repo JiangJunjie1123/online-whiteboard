@@ -1,6 +1,7 @@
 // Barrel import: importing these files triggers their shapeRegistry.register() calls.
 // Do NOT remove unused imports — they are required for side effects.
 
+import './PointerTool'
 import './BrushTool'
 import './RectangleTool'
 import './CircleTool'

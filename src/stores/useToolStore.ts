@@ -12,7 +12,7 @@ interface ToolState {
 }
 
 export const useToolStore = create<ToolState>((set) => ({
-  activeTool: 'brush',
+  activeTool: 'pointer',
   style: {
     strokeColor: '#1A73E8',
     strokeWidth: 2,

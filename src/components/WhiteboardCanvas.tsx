@@ -21,6 +21,7 @@ export function WhiteboardCanvas() {
   const [textValue, setTextValue] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [panning, setPanning] = useState(false)
+  const spaceDown = useRef(false)
   const stageRef = useRef<Konva.Stage>(null)
   const cursorThrottle = useRef(0)
   const panStart = useRef({ x: 0, y: 0, stageX: 0, stageY: 0 })
@@ -136,8 +137,8 @@ export function WhiteboardCanvas() {
     e.evt.preventDefault()
     e.evt.stopPropagation()
 
-    // Middle mouse button — start panning
-    if (e.evt.button === 1) {
+    // Space+drag — pan canvas (Figma/draw.io style)
+    if (spaceDown.current) {
       setPanning(true)
       panStart.current = { x: e.evt.clientX, y: e.evt.clientY, stageX, stageY }
       return
@@ -147,6 +148,15 @@ export function WhiteboardCanvas() {
     if (e.target === e.target.getStage()) {
       setSelectedId(null)
       const pos = getPointerPos()
+
+      // Pointer mode: only deselect, don't draw
+      const drawingTools = ['brush','rectangle','circle','arrow','text','line','triangle','star','diamond','pentagon',
+        'hexagon','octagon','parallelogram','trapezoid','cross','double-arrow','dashed-line','curved-arrow',
+        'note-sticky','flow-terminator','document','database','cloud','delay','predefined-process','or-circle',
+        'class-box','actor','lifeline','activation-box','callout','bracket','highlight','cylinder','shield',
+        'gear','block-arrow','table-grid','signal','bent-arrow','connector-label'
+      ]
+      if (!drawingTools.includes(activeTool)) return
 
       if (activeTool === 'text') {
         setTextPos(pos)
@@ -223,21 +233,37 @@ export function WhiteboardCanvas() {
   }, [panning, drawingShape, addShape, syncSend, scale])
 
   const handleTextConfirm = useCallback(() => {
-    if (textValue.trim()) {
-      const shape: Shape = {
-        id: `shape_${Date.now()}`,
-        type: 'text',
-        points: [textPos.x, textPos.y],
-        style: { ...style },
-        text: textValue,
-        userId: userId || undefined,
-      }
-      addShape(shape)
-      syncSend('draw', shape)
+    if (!textValue.trim()) {
+      setShowTextInput(false)
+      setTextValue('')
+      return
     }
+    // If a shape with text is selected, update its text (edit mode)
+    if (selectedId) {
+      const existing = shapes.find(s => s.id === selectedId)
+      if (existing && existing.text !== undefined) {
+        useCanvasStore.getState().updateShape(selectedId, { text: textValue })
+        const updated = { ...existing, text: textValue }
+        syncSend('update', updated)
+        setShowTextInput(false)
+        setTextValue('')
+        return
+      }
+    }
+    // Otherwise create a new text shape
+    const shape: Shape = {
+      id: `shape_${Date.now()}`,
+      type: 'text',
+      points: [textPos.x, textPos.y],
+      style: { ...style },
+      text: textValue,
+      userId: userId || undefined,
+    }
+    addShape(shape)
+    syncSend('draw', shape)
     setShowTextInput(false)
     setTextValue('')
-  }, [textValue, textPos, style, addShape, syncSend])
+  }, [textValue, textPos, style, selectedId, shapes, addShape, syncSend, userId])
 
   const handleSelectShape = useCallback((shapeId: string) => {
     setSelectedId(shapeId === selectedId ? null : shapeId)
@@ -299,9 +325,15 @@ export function WhiteboardCanvas() {
     return null
   }
 
-  // Keyboard: delete selected, Ctrl+Z undo
+  // Keyboard: delete selected, Ctrl+Z undo, Space pan tracking
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
+      // Space press/release for pan mode
+      if (e.key === ' ' && !e.repeat) {
+        if (e.type === 'keydown') { spaceDown.current = true; setPanning(prev => prev || false) }
+        if (e.type === 'keyup') { spaceDown.current = false; setPanning(false) }
+        return
+      }
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
         const shape = shapes.find((s) => s.id === selectedId)
         if (shape) {
@@ -329,7 +361,11 @@ export function WhiteboardCanvas() {
       }
     }
     window.addEventListener('keydown', handleKey)
-    return () => window.removeEventListener('keydown', handleKey)
+    window.addEventListener('keyup', handleKey)
+    return () => {
+      window.removeEventListener('keydown', handleKey)
+      window.removeEventListener('keyup', handleKey)
+    }
   }, [selectedId, shapes, userId, removeShape, syncSend])
 
   // Drag-and-drop from toolbar: create shape at drop position
@@ -423,7 +459,26 @@ export function WhiteboardCanvas() {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={() => { setPanning(false); setDrawingShape(null) }}
-        style={{ cursor: panning ? 'grabbing' : activeTool === 'text' ? 'text' : 'crosshair' }}
+        onDblClick={(e) => {
+          let node: any = e.target
+          let shapeId = node.id()
+          // Walk up to find shape id (for composite shapes like Group with sub-elements)
+          while ((!shapeId || shapeId === '') && node.getParent()) {
+            node = node.getParent()
+            shapeId = node?.id?.()
+          }
+          if (shapeId) {
+            const shape = shapes.find(s => s.id === shapeId)
+            if (shape && shape.text !== undefined) {
+              const pos = getPointerPos()
+              setTextPos(pos)
+              setTextValue(shape.text || '')
+              setShowTextInput(true)
+              setSelectedId(shapeId)
+            }
+          }
+        }}
+        style={{ cursor: panning ? 'grabbing' : spaceDown.current ? 'grab' : activeTool === 'pointer' ? 'default' : activeTool === 'text' ? 'text' : 'crosshair' }}
       >
         <GridBackground />
         <Layer>
@@ -480,7 +535,7 @@ export function WhiteboardCanvas() {
 
       {/* Status */}
       <div className="fixed bottom-3 left-1/2 -translate-x-1/2 text-xs text-gray-400 bg-white/60 backdrop-blur-sm px-3 py-1 rounded-full">
-        形状: {shapes.length} · {Math.round(scale * 100)}% · 右键拖拽平移 · Ctrl+Z 撤销 · Delete 删除
+        形状: {shapes.length} · {Math.round(scale * 100)}% · Space+拖拽平移 · 双击编辑文字 · Ctrl+Z 撤销
       </div>
     </div>
   )
