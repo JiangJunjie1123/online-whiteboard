@@ -50,7 +50,7 @@ export function Sidebar() {
   }
 
   return (
-    <div className="fixed left-0 top-0 h-full w-64 z-40 flex flex-col bg-white/90 backdrop-blur-sm border-r border-gray-200 shadow-lg select-none overflow-y-auto">
+    <div className="fixed left-0 top-0 h-full w-64 z-40 flex flex-col bg-white/90 backdrop-blur-sm border-r border-gray-200 shadow-lg select-none">
       {/* Header */}
       <div className="px-4 pt-4 pb-3 border-b border-gray-100 flex-shrink-0">
         <div className="flex items-center gap-2 px-3 py-2 bg-primary-light/50 rounded-lg">
@@ -78,74 +78,71 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* Shape panel */}
-      <div className="flex-shrink-0">
+      {/* Scrollable tools + style area */}
+      <div className="flex-1 overflow-y-auto">
         <ShapePanel />
-      </div>
 
-      {/* Style controls */}
-      <div className="px-4 py-3 border-b border-gray-100 space-y-3 flex-shrink-0">
-        <h3 className="text-[10px] font-medium text-primary/50 uppercase tracking-wider">样式</h3>
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-gray-500 w-7">颜色</span>
-          {['#1A73E8', '#E53935', '#43A047', '#FB8C00', '#8E24AA', '#00ACC1', '#212121', '#757575'].map((c) => (
-            <button
-              key={c}
-              onClick={() => setColor(c)}
-              className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${style.strokeColor === c ? 'border-gray-800 scale-110 ring-2 ring-offset-1 ring-gray-400' : 'border-gray-300'}`}
-              style={{ backgroundColor: c }}
-              title={c}
+        <div className="px-4 py-3 border-b border-gray-100 space-y-3">
+          <h3 className="text-[10px] font-medium text-primary/50 uppercase tracking-wider">样式</h3>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-gray-500 w-7">颜色</span>
+            {['#1A73E8', '#E53935', '#43A047', '#FB8C00', '#8E24AA', '#00ACC1', '#212121', '#757575'].map((c) => (
+              <button
+                key={c}
+                onClick={() => setColor(c)}
+                className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${style.strokeColor === c ? 'border-gray-800 scale-110 ring-2 ring-offset-1 ring-gray-400' : 'border-gray-300'}`}
+                style={{ backgroundColor: c }}
+                title={c}
+              />
+            ))}
+            <input
+              type="color"
+              value={style.strokeColor}
+              onChange={(e) => setColor(e.target.value)}
+              className="w-6 h-6 rounded cursor-pointer border border-gray-300"
             />
-          ))}
-          <input
-            type="color"
-            value={style.strokeColor}
-            onChange={(e) => setColor(e.target.value)}
-            className="w-6 h-6 rounded cursor-pointer border border-gray-300"
-          />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500 w-7">粗细</span>
+            <input
+              type="range"
+              min={1}
+              max={20}
+              value={style.strokeWidth}
+              onChange={(e) => setStrokeWidth(Number(e.target.value))}
+              className="flex-1 h-1 accent-primary cursor-pointer"
+            />
+            <span className="text-xs text-primary/50 w-5 text-right">{style.strokeWidth}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500 w-7">粗细</span>
-          <input
-            type="range"
-            min={1}
-            max={20}
-            value={style.strokeWidth}
-            onChange={(e) => setStrokeWidth(Number(e.target.value))}
-            className="flex-1 h-1 accent-primary cursor-pointer"
-          />
-          <span className="text-xs text-primary/50 w-5 text-right">{style.strokeWidth}</span>
+
+        <div className="px-4 py-3 border-b border-gray-100 flex gap-2">
+          <button
+            onClick={handleUndo}
+            disabled={ownShapeCount === 0}
+            className="flex-1 px-3 py-2 rounded-lg text-sm font-medium text-primary/70 hover:bg-primary-light/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            ↩ 撤销
+          </button>
+          <button
+            onClick={handleClear}
+            disabled={shapes.length === 0}
+            className="flex-1 px-3 py-2 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            🗑 清空
+          </button>
+        </div>
+
+        <div className="px-4 py-3 border-b border-gray-100">
+          <ExportPopover />
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="px-4 py-3 border-b border-gray-100 flex gap-2">
-        <button
-          onClick={handleUndo}
-          disabled={ownShapeCount === 0}
-          className="flex-1 px-3 py-2 rounded-lg text-sm font-medium text-primary/70 hover:bg-primary-light/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-        >
-          ↩ 撤销
-        </button>
-        <button
-          onClick={handleClear}
-          disabled={shapes.length === 0}
-          className="flex-1 px-3 py-2 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-        >
-          🗑 清空
-        </button>
-      </div>
-
-      {/* Export */}
-      <div className="px-4 py-3 border-b border-gray-100">
-        <ExportPopover />
-      </div>
-
-      {/* User section */}
-      <div className="px-4 py-3 flex-1 overflow-y-auto">
+      {/* User section — always visible at bottom */}
+      <div className="px-4 py-3 border-t border-gray-100 flex-shrink-0 max-h-[35%] flex flex-col">
         <button
           onClick={() => setUsersOpen(!usersOpen)}
-          className="flex items-center justify-between w-full mb-2"
+          className="flex items-center justify-between w-full mb-2 flex-shrink-0"
         >
           <span className="text-xs font-medium text-primary/50 uppercase tracking-wider">
             在线 ({users.length})
@@ -153,7 +150,7 @@ export function Sidebar() {
           <span className="text-xs text-primary/50">{usersOpen ? '▼' : '▶'}</span>
         </button>
         {usersOpen && (
-          <div className="space-y-1">
+          <div className="space-y-1 overflow-y-auto flex-1">
             {users.map((user) => (
               <div key={user.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-primary-light/20">
                 <div
