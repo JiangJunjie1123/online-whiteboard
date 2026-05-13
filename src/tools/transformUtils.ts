@@ -10,12 +10,11 @@ export interface TransformResult {
 
 export function computeTransformedPoints(
   shape: Shape,
-  node: Konva.Node,
-  stageScale = 1
+  node: Konva.Node
 ): TransformResult {
   const def = shapeRegistry.get(shape.type)
   if (def?.transform) {
-    return def.transform(shape, node, stageScale)
+    return def.transform(shape, node)
   }
   console.warn(`[Transform] No transform registered for type: ${shape.type}`)
   return { points: shape.points }
@@ -24,9 +23,9 @@ export function computeTransformedPoints(
 // Shared polygon transform for all closed/open multi-vertex Line shapes.
 // Computes the axis-aligned bounding box of the scaled local vertices,
 // then translates to world coords. Rotation is stored separately.
-export function computePolygonTransform(shape: Shape, node: Konva.Line, stageScale = 1): TransformResult {
-  const cx = node.x() / stageScale
-  const cy = node.y() / stageScale
+export function computePolygonTransform(shape: Shape, node: Konva.Line): TransformResult {
+  const cx = node.x()
+  const cy = node.y()
   const rotation = node.rotation()
   const sX = node.scaleX()
   const sY = node.scaleY()
@@ -34,8 +33,8 @@ export function computePolygonTransform(shape: Shape, node: Konva.Line, stageSca
 
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
   for (let i = 0; i < localPoints.length; i += 2) {
-    const lx = localPoints[i] * sX / stageScale
-    const ly = localPoints[i + 1] * sY / stageScale
+    const lx = localPoints[i] * sX
+    const ly = localPoints[i + 1] * sY
     minX = Math.min(minX, lx)
     minY = Math.min(minY, ly)
     maxX = Math.max(maxX, lx)
@@ -49,10 +48,10 @@ export function computePolygonTransform(shape: Shape, node: Konva.Line, stageSca
 }
 
 // Brush: move only. Compute delta from node position and apply to all points.
-export function computeBrushTransform(shape: Shape, node: Konva.Line, stageScale = 1): TransformResult {
+export function computeBrushTransform(shape: Shape, node: Konva.Line): TransformResult {
   const newPoints = [...shape.points]
-  const dx = node.x() / stageScale
-  const dy = node.y() / stageScale
+  const dx = node.x()
+  const dy = node.y()
   if (dx !== 0 || dy !== 0) {
     for (let i = 0; i < newPoints.length; i += 2) {
       newPoints[i] += dx
@@ -62,12 +61,29 @@ export function computeBrushTransform(shape: Shape, node: Konva.Line, stageScale
   return { points: newPoints }
 }
 
+// Group-based shapes: derive original size from shape points, then scale.
+// Group nodes don't have width()/height() set, so we can't use node.width().
+export function computeGroupTransform(shape: Shape, node: Konva.Group): TransformResult {
+  const [x1, y1, x2, y2] = shape.points
+  const origW = Math.abs(x2 - x1)
+  const origH = Math.abs(y2 - y1)
+  return {
+    points: [
+      node.x(),
+      node.y(),
+      node.x() + origW * node.scaleX(),
+      node.y() + origH * node.scaleY(),
+    ],
+    rotation: node.rotation() || undefined,
+  }
+}
+
 // Rectangle: full transform. Bake scale into width/height, capture rotation.
-export function computeRectTransform(shape: Shape, node: Konva.Rect, stageScale = 1): TransformResult {
-  const x = node.x() / stageScale
-  const y = node.y() / stageScale
-  const w = node.width() * node.scaleX() / stageScale
-  const h = node.height() * node.scaleY() / stageScale
+export function computeRectTransform(shape: Shape, node: Konva.Rect): TransformResult {
+  const x = node.x()
+  const y = node.y()
+  const w = node.width() * node.scaleX()
+  const h = node.height() * node.scaleY()
   const rotation = node.rotation()
   return {
     points: [x, y, x + w, y + h],
@@ -76,11 +92,11 @@ export function computeRectTransform(shape: Shape, node: Konva.Rect, stageScale 
 }
 
 // Circle: full transform. Bake scale into radii, capture rotation.
-export function computeCircleTransform(shape: Shape, node: Konva.Ellipse, stageScale = 1): TransformResult {
-  const cx = node.x() / stageScale
-  const cy = node.y() / stageScale
-  const rx = node.radiusX() * node.scaleX() / stageScale
-  const ry = node.radiusY() * node.scaleY() / stageScale
+export function computeCircleTransform(shape: Shape, node: Konva.Ellipse): TransformResult {
+  const cx = node.x()
+  const cy = node.y()
+  const rx = node.radiusX() * node.scaleX()
+  const ry = node.radiusY() * node.scaleY()
   const rotation = node.rotation()
   return {
     points: [cx - rx, cy - ry, cx + rx, cy + ry],
@@ -92,18 +108,18 @@ export function computeCircleTransform(shape: Shape, node: Konva.Ellipse, stageS
 // After transform, compute world-space start/end by applying scale and rotation to
 // the local points, then translating by the node position. Rotation is baked into
 // the resulting world-space points (no separate rotation field).
-export function computeArrowTransform(shape: Shape, node: Konva.Arrow, stageScale = 1): TransformResult {
-  const cx = node.x() / stageScale
-  const cy = node.y() / stageScale
+export function computeArrowTransform(shape: Shape, node: Konva.Arrow): TransformResult {
+  const cx = node.x()
+  const cy = node.y()
   const rotation = node.rotation()
   const scaleX = node.scaleX()
   const scaleY = node.scaleY()
 
   const localPoints = node.points()
-  const localX1 = localPoints[0] * scaleX / stageScale
-  const localY1 = localPoints[1] * scaleY / stageScale
-  const localX2 = localPoints[2] * scaleX / stageScale
-  const localY2 = localPoints[3] * scaleY / stageScale
+  const localX1 = localPoints[0] * scaleX
+  const localY1 = localPoints[1] * scaleY
+  const localX2 = localPoints[2] * scaleX
+  const localY2 = localPoints[3] * scaleY
 
   const rad = (rotation * Math.PI) / 180
   const cos = Math.cos(rad)
@@ -120,14 +136,14 @@ export function computeArrowTransform(shape: Shape, node: Konva.Arrow, stageScal
 }
 
 // Text: move + rotate. Scale bakes into fontSize.
-export function computeTextTransform(shape: Shape, node: Konva.Text, stageScale = 1): TransformResult {
-  const x = node.x() / stageScale
-  const y = node.y() / stageScale
+export function computeTextTransform(shape: Shape, node: Konva.Text): TransformResult {
+  const x = node.x()
+  const y = node.y()
   const rotation = node.rotation()
   const scaleY = node.scaleY()
   const fontSize = shape.style.fontSize !== undefined
-    ? Math.round(shape.style.fontSize * scaleY / stageScale)
-    : Math.round(24 * scaleY / stageScale)
+    ? Math.round(shape.style.fontSize * scaleY)
+    : Math.round(24 * scaleY)
   return {
     points: [x, y],
     rotation: rotation || undefined,

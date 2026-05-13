@@ -37,7 +37,6 @@ import './OrCircleTool'
 import './ClassBoxTool'
 import './ActorTool'
 import './LifelineTool'
-import './ActivationBoxTool'
 
 // V3B Phase 2 new shapes — Annotation
 import './CalloutTool'
@@ -54,4 +53,3 @@ import './SignalTool'
 
 // V3B Phase 2 new shapes — Arrow variants
 import './BentArrowTool'
-import './ConnectorLabelTool'

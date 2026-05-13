@@ -2,7 +2,7 @@ import { Group, Ellipse, Rect } from 'react-konva'
 import type Konva from 'konva'
 import type { Shape, Point } from '../types'
 import { shapeRegistry } from '../config/shapeRegistry'
-import { computeRectTransform } from '../tools/transformUtils'
+import { computeGroupTransform } from '../tools/transformUtils'
 import { useCanvasStore } from '../stores/useCanvasStore'
 import { getSyncManager } from '../sync/SyncManager'
 
@@ -127,23 +127,19 @@ export function DatabaseShape({ shape, isSelected, onSelect, shapeRef }: Databas
         fill={shape.style.fillColor || '#F0F4FF'}
         listening={false}
       />
-      {/* Side lines for body connection */}
-      <Rect
-        x={0}
-        y={0}
-        width={shape.style.strokeWidth || 1}
-        height={topH}
-        fill={shape.style.strokeColor || '#2980B9'}
-        listening={false}
-      />
-      <Rect
-        x={w - (shape.style.strokeWidth || 1)}
-        y={0}
-        width={shape.style.strokeWidth || 1}
-        height={topH}
-        fill={shape.style.strokeColor || '#2980B9'}
-        listening={false}
-      />
+      {/* Stacked disk lines for database look */}
+      {[1, 2].map((i) => (
+        <Ellipse
+          key={i}
+          x={w / 2}
+          y={topH + (bodyH * i) / 3}
+          radiusX={w / 2}
+          radiusY={topH * 0.6}
+          stroke={shape.style.strokeColor || '#2980B9'}
+          strokeWidth={shape.style.strokeWidth ? Math.max(1, shape.style.strokeWidth * 0.6) : 1}
+          listening={false}
+        />
+      ))}
     </Group>
   )
 }
@@ -156,5 +152,5 @@ shapeRegistry.register({
   renderer: (props) => <DatabaseShape {...props} />,
   updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
   defaultStyle: { fillColor: '#F0F4FF', strokeColor: '#2980B9' },
-  transform: (shape, node, stageScale) => computeRectTransform(shape, node as any, stageScale),
+  transform: (shape, node) => computeGroupTransform(shape, node as any),
 })

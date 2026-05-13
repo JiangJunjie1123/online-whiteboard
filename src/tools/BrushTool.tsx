@@ -67,5 +67,5 @@ shapeRegistry.register({
   renderer: (props) => <BrushShape {...props} />,
   updatePoints: (shape: Shape, pt: Point) => [...shape.points, pt.x, pt.y],
   getTransformerConfig: () => ({ enabledAnchors: [], rotateEnabled: false, keepRatio: false }),
-  transform: (shape, node, stageScale) => computeBrushTransform(shape, node as Konva.Line, stageScale),
+  transform: (shape, node) => computeBrushTransform(shape, node as Konva.Line),
 })

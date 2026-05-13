@@ -69,5 +69,5 @@ shapeRegistry.register({
   category: 'basic',
   renderer: (props) => <RectangleShape {...props} />,
   updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
-  transform: (shape, node, stageScale) => computeRectTransform(shape, node as Konva.Rect, stageScale),
+  transform: (shape, node) => computeRectTransform(shape, node as Konva.Rect),
 })

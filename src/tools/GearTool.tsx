@@ -80,5 +80,5 @@ shapeRegistry.register({
   renderer: (props) => <GearShape {...props} />,
   updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
   defaultStyle: { fillColor: '#F3F4F6', strokeColor: '#4B5563' },
-  transform: (shape, node, stageScale) => computePolygonTransform(shape, node as Konva.Line, stageScale),
+  transform: (shape, node) => computePolygonTransform(shape, node as Konva.Line),
 })

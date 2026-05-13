@@ -2,7 +2,7 @@ import { Line } from 'react-konva'
 import type Konva from 'konva'
 import type { Shape, Point } from '../types'
 import { shapeRegistry } from '../config/shapeRegistry'
-import { computeArrowTransform } from '../tools/transformUtils'
+import { computePolygonTransform } from '../tools/transformUtils'
 import { useCanvasStore } from '../stores/useCanvasStore'
 import { getSyncManager } from '../sync/SyncManager'
 
@@ -66,5 +66,5 @@ shapeRegistry.register({
   category: 'arrow',
   renderer: (props) => <DashedLineShape {...props} />,
   updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
-  transform: (shape, node, stageScale) => computeArrowTransform(shape, node as Konva.Arrow, stageScale),
+  transform: (shape, node) => computePolygonTransform(shape, node as Konva.Line),
 })

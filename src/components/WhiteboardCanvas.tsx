@@ -3,6 +3,7 @@ import { Stage, Layer, Line, Rect, Transformer } from 'react-konva'
 import type Konva from 'konva'
 import { useToolStore } from '../stores/useToolStore'
 import { useCanvasStore } from '../stores/useCanvasStore'
+import { generateId } from '../stores/useCanvasStore'
 import { useUserStore } from '../stores/useUserStore'
 import { createShape, updateShapePoints, isClick } from '../tools/ToolManager'
 import { computeTransformedPoints } from '../tools/transformUtils'
@@ -122,7 +123,7 @@ export function WhiteboardCanvas() {
     const shape = shapes.find((s) => s.id === selectedId)
     if (!shape) return
 
-    const result = computeTransformedPoints(shape, node, scale)
+    const result = computeTransformedPoints(shape, node)
 
     node.x(0)
     node.y(0)
@@ -167,8 +168,8 @@ export function WhiteboardCanvas() {
       const drawingTools = ['brush','rectangle','circle','arrow','text','line','triangle','star','diamond','pentagon',
         'hexagon','octagon','parallelogram','trapezoid','cross','double-arrow','dashed-line','curved-arrow',
         'note-sticky','flow-terminator','document','database','cloud','delay','predefined-process','or-circle',
-        'class-box','actor','lifeline','activation-box','callout','bracket','highlight','cylinder','shield',
-        'gear','block-arrow','table-grid','signal','bent-arrow','connector-label'
+        'class-box','actor','lifeline','callout','bracket','highlight','cylinder','shield',
+        'gear','block-arrow','table-grid','signal','bent-arrow'
       ]
       if (!drawingTools.includes(activeTool)) return
 
@@ -222,8 +223,37 @@ export function WhiteboardCanvas() {
     }
     if (!drawingShape) return
     if (!isClick(drawingShape.points, scale)) {
-      addShape(drawingShape)
-      syncSend('draw', drawingShape)
+      if (drawingShape.type === 'bracket') {
+        const [bx1, by1, bx2, by2] = drawingShape.points
+        const bMinX = Math.min(bx1, bx2), bMaxX = Math.max(bx1, bx2)
+        const bMinY = Math.min(by1, by2), bMaxY = Math.max(by1, by2)
+        const bW = bMaxX - bMinX, bH = bMaxY - bMinY
+        const bHookLen = Math.min(bW * 0.3, bH * 0.12, 14)
+        const bWidth = Math.max(bHookLen, 8)
+        const leftBracket: Shape = {
+          id: generateId(),
+          type: 'bracket',
+          points: [bMinX, bMinY, bMinX + bWidth, bMaxY],
+          style: { ...drawingShape.style },
+          extras: { bracketSide: 'left' },
+          userId: drawingShape.userId,
+        }
+        const rightBracket: Shape = {
+          id: generateId(),
+          type: 'bracket',
+          points: [bMaxX - bWidth, bMinY, bMaxX, bMaxY],
+          style: { ...drawingShape.style },
+          extras: { bracketSide: 'right' },
+          userId: drawingShape.userId,
+        }
+        addShape(leftBracket)
+        addShape(rightBracket)
+        syncSend('draw', leftBracket)
+        syncSend('draw', rightBracket)
+      } else {
+        addShape(drawingShape)
+        syncSend('draw', drawingShape)
+      }
       // Auto-expand: if shape touches viewport edge, pan slightly to give more room
       const margin = 100
       const vs = useCanvasStore.getState()
@@ -248,14 +278,38 @@ export function WhiteboardCanvas() {
 
   const handleTextConfirm = useCallback(() => {
     if (!textValue.trim()) {
+      delete (window as any)._tableEditCell
       setShowTextInput(false)
       setTextValue('')
       return
     }
-    // If a shape with text is selected, update its text (edit mode)
+    // If a text-editable shape is selected, update its text
     if (selectedId) {
       const existing = shapes.find(s => s.id === selectedId)
-      if (existing && existing.text !== undefined) {
+
+      // 表格单元格编辑
+      const tableEdit = (window as any)._tableEditCell
+      if (tableEdit && tableEdit.shapeId === selectedId && existing) {
+        if (!textValue.trim()) {
+          delete (window as any)._tableEditCell
+          setShowTextInput(false)
+          setTextValue('')
+          return
+        }
+        const prevCells = (existing.extras?.cells as string[] | undefined) || Array(9).fill('')
+        const cells = [...prevCells]
+        cells[tableEdit.cellIndex] = textValue
+        useCanvasStore.getState().updateShape(selectedId, { extras: { ...existing.extras, cells } })
+        const updated = { ...existing, extras: { ...existing.extras, cells } }
+        syncSend('update', updated)
+        delete (window as any)._tableEditCell
+        setShowTextInput(false)
+        setTextValue('')
+        return
+      }
+
+      const textEditableTypes = ['text', 'flow-terminator', 'note-sticky', 'class-box', 'or-circle', 'callout']
+      if (existing && (existing.text !== undefined || textEditableTypes.includes(existing.type))) {
         useCanvasStore.getState().updateShape(selectedId, { text: textValue })
         const updated = { ...existing, text: textValue }
         syncSend('update', updated)
@@ -401,42 +455,58 @@ export function WhiteboardCanvas() {
     const worldX = (screenX - stageX) / scale
     const worldY = (screenY - stageY) / scale
 
-    const shape = createShape(shapeType, { x: worldX, y: worldY }, style, userId || undefined)
-    // Set default size for the shape
-    const defaultW = 80
-    const defaultH = 60
-    switch (shapeType) {
-      case 'brush':
-        shape.points = [worldX, worldY, worldX + 10, worldY + 10]
-        break
-      case 'line':
-      case 'arrow':
-      case 'double-arrow':
-      case 'dashed-line':
-      case 'curved-arrow':
-        shape.points = [worldX, worldY, worldX + defaultW, worldY]
-        break
-      case 'text':
-        shape.points = [worldX, worldY]
-        shape.text = '文本'
-        break
-      case 'flow-terminator':
-        shape.points = [worldX, worldY, worldX + 100, worldY + 40]
-        shape.text = '开始/结束'
-        break
-      case 'connector-label':
-        shape.points = [worldX, worldY, worldX + 150, worldY + 40]
-        shape.text = 'Label'
-        break
-      case 'note-sticky':
-        shape.points = [worldX, worldY, worldX + 120, worldY + 100]
-        break
-      default:
-        shape.points = [worldX, worldY, worldX + defaultW, worldY + defaultH]
+    if (shapeType === 'bracket') {
+      const bDefW = 80, bDefH = 60
+      const bHookLen = Math.min(bDefW * 0.3, bDefH * 0.12, 14)
+      const bWidth = Math.max(bHookLen, 8)
+      const leftBracket: Shape = {
+        id: generateId(), type: 'bracket',
+        points: [worldX, worldY, worldX + bWidth, worldY + bDefH],
+        style: { ...style }, extras: { bracketSide: 'left' },
+        userId: userId || undefined,
+      }
+      const rightBracket: Shape = {
+        id: generateId(), type: 'bracket',
+        points: [worldX + bDefW - bWidth, worldY, worldX + bDefW, worldY + bDefH],
+        style: { ...style }, extras: { bracketSide: 'right' },
+        userId: userId || undefined,
+      }
+      addShape(leftBracket)
+      addShape(rightBracket)
+      syncSend('draw', leftBracket)
+      syncSend('draw', rightBracket)
+    } else {
+      const shape = createShape(shapeType, { x: worldX, y: worldY }, style, userId || undefined)
+      const defaultW = 80
+      const defaultH = 60
+      switch (shapeType) {
+        case 'brush':
+          shape.points = [worldX, worldY, worldX + 10, worldY + 10]
+          break
+        case 'line':
+        case 'arrow':
+        case 'double-arrow':
+        case 'dashed-line':
+        case 'curved-arrow':
+          shape.points = [worldX, worldY, worldX + defaultW, worldY]
+          break
+        case 'text':
+          shape.points = [worldX, worldY]
+          shape.text = '文本'
+          break
+        case 'flow-terminator':
+          shape.points = [worldX, worldY, worldX + 100, worldY + 40]
+          shape.text = '开始/结束'
+          break
+        case 'note-sticky':
+          shape.points = [worldX, worldY, worldX + 120, worldY + 100]
+          break
+        default:
+          shape.points = [worldX, worldY, worldX + defaultW, worldY + defaultH]
+      }
+      addShape(shape)
+      syncSend('draw', shape)
     }
-
-    addShape(shape)
-    syncSend('draw', shape)
   }, [stageX, stageY, scale, style, userId, addShape, syncSend])
 
   return (
@@ -489,7 +559,7 @@ export function WhiteboardCanvas() {
             const shape = shapes.find(s => s.id === shapeId)
             if (shape) {
               // Allow text editing for shapes that have or support text
-              const textEditableTypes = ['text', 'connector-label', 'flow-terminator', 'note-sticky', 'class-box', 'or-circle', 'callout']
+              const textEditableTypes = ['text', 'flow-terminator', 'note-sticky', 'class-box', 'or-circle', 'callout']
               if (shape.text !== undefined || textEditableTypes.includes(shape.type)) {
                 const pos = getPointerPos()
                 setTextPos(pos)
@@ -531,7 +601,7 @@ export function WhiteboardCanvas() {
       {showTextInput && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/20"
-          onClick={() => setShowTextInput(false)}
+          onClick={() => { delete (window as any)._tableEditCell; setShowTextInput(false) }}
         >
           <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-4 w-80" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-sm font-medium text-gray-700 mb-3">输入文本</h3>
@@ -541,14 +611,14 @@ export function WhiteboardCanvas() {
               onChange={(e) => setTextValue(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleTextConfirm()
-                if (e.key === 'Escape') setShowTextInput(false)
+                if (e.key === 'Escape') { delete (window as any)._tableEditCell; setShowTextInput(false) }
               }}
               placeholder="在此输入文字..."
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:border-gray-500 mb-3"
               autoFocus
             />
             <div className="flex justify-end gap-2">
-              <button onClick={() => setShowTextInput(false)} className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">取消</button>
+              <button onClick={() => { delete (window as any)._tableEditCell; setShowTextInput(false) }} className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">取消</button>
               <button onClick={handleTextConfirm} className="px-3 py-1.5 text-sm text-white bg-gray-800 hover:bg-gray-700 rounded-lg">确认</button>
             </div>
           </div>

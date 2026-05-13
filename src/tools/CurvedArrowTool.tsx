@@ -71,5 +71,5 @@ shapeRegistry.register({
   category: 'arrow',
   renderer: (props) => <CurvedArrowShape {...props} />,
   updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
-  transform: (shape, node, stageScale) => computeArrowTransform(shape, node as Konva.Arrow, stageScale),
+  transform: (shape, node) => computeArrowTransform(shape, node as Konva.Arrow),
 })

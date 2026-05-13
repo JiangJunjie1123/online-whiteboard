@@ -68,5 +68,5 @@ shapeRegistry.register({
   category: 'basic',
   renderer: (props) => <CircleShape {...props} />,
   updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
-  transform: (shape, node, stageScale) => computeCircleTransform(shape, node as Konva.Ellipse, stageScale),
+  transform: (shape, node) => computeCircleTransform(shape, node as Konva.Ellipse),
 })

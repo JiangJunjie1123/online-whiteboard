@@ -2,7 +2,7 @@ import { Group, Ellipse, Rect } from 'react-konva'
 import type Konva from 'konva'
 import type { Shape, Point } from '../types'
 import { shapeRegistry } from '../config/shapeRegistry'
-import { computeRectTransform } from '../tools/transformUtils'
+import { computeGroupTransform } from '../tools/transformUtils'
 import { useCanvasStore } from '../stores/useCanvasStore'
 import { getSyncManager } from '../sync/SyncManager'
 
@@ -110,5 +110,5 @@ shapeRegistry.register({
   renderer: (props) => <CylinderShape {...props} />,
   updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
   defaultStyle: { fillColor: '#F0F4FF', strokeColor: '#2563EB' },
-  transform: (shape, node, stageScale) => computeRectTransform(shape, node as any, stageScale),
+  transform: (shape, node) => computeGroupTransform(shape, node as any),
 })

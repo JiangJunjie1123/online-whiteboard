@@ -122,5 +122,5 @@ shapeRegistry.register({
   renderer: (props) => <CloudShape {...props} />,
   updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
   defaultStyle: { fillColor: '#F0F4FF', strokeColor: '#2980B9' },
-  transform: (shape, node, stageScale) => computePolygonTransform(shape, node as Konva.Line, stageScale),
+  transform: (shape, node) => computePolygonTransform(shape, node as Konva.Line),
 })

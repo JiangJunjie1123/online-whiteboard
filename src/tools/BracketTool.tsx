@@ -20,23 +20,26 @@ export function BracketShape({ shape, isSelected, onSelect, shapeRef }: BracketS
   const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2
   const w = maxX - minX
   const h = maxY - minY
-  const hookLen = Math.min(w * 0.3, h * 0.12, 14)
-
-  // Left square bracket: [ shape
-  //   top hook (right → left), down, bottom hook (left → right)
-  // Actually draw: top-right → top-left → bottom-left → bottom-right
-  // For "[": left vertical line with small top/bottom horizontal hooks pointing right
-  const leftX = -w / 2
+  const side = (shape.extras?.bracketSide as string) || 'left'
+  const hookLen = Math.min(w * 0.7, h * 0.15, 14)
   const topY = -h / 2
   const bottomY = h / 2
-  const rightX = -w / 2 + hookLen
 
-  const verts = [
-    rightX, topY,           // top hook right end
-    leftX, topY,            // top hook left → horizontal top
-    leftX, bottomY,         // left vertical down
-    rightX, bottomY,        // bottom hook left → right
-  ]
+  const verts = side === 'right'
+    ? [
+        // 右括号 ]：竖线在右，钩子朝左
+        w / 2 - hookLen, topY,
+        w / 2, topY,
+        w / 2, bottomY,
+        w / 2 - hookLen, bottomY,
+      ]
+    : [
+        // 左括号 [：竖线在左，钩子朝右
+        -w / 2 + hookLen, topY,
+        -w / 2, topY,
+        -w / 2, bottomY,
+        -w / 2 + hookLen, bottomY,
+      ]
 
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
     const node = e.target
@@ -62,6 +65,7 @@ export function BracketShape({ shape, isSelected, onSelect, shapeRef }: BracketS
       rotation={shape.rotation || 0}
       stroke={shape.style.strokeColor}
       strokeWidth={shape.style.strokeWidth}
+      hitStrokeWidth={Math.max(shape.style.strokeWidth + 12, 16)}
       fill={shape.style.fillColor}
       opacity={shape.style.opacity}
       lineCap="round"
@@ -87,5 +91,5 @@ shapeRegistry.register({
   renderer: (props) => <BracketShape {...props} />,
   updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
   defaultStyle: { strokeColor: '#6B7280', fillColor: 'transparent' },
-  transform: (shape, node, stageScale) => computePolygonTransform(shape, node as Konva.Line, stageScale),
+  transform: (shape, node) => computePolygonTransform(shape, node as Konva.Line),
 })

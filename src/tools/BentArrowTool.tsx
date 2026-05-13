@@ -73,5 +73,5 @@ shapeRegistry.register({
   category: 'arrow',
   renderer: (props) => <BentArrowShape {...props} />,
   updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
-  transform: (shape, node, stageScale) => computePolygonTransform(shape, node as any, stageScale),
+  transform: (shape, node) => computePolygonTransform(shape, node as any),
 })

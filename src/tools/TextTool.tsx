@@ -61,5 +61,5 @@ shapeRegistry.register({
   renderer: (props) => <TextShape {...props} />,
   updatePoints: (_shape: Shape, _pt: Point) => [_shape.points[0], _shape.points[1]],
   getTransformerConfig: () => ({ enabledAnchors: [], rotateEnabled: true, keepRatio: false }),
-  transform: (shape, node, stageScale) => computeTextTransform(shape, node as Konva.Text, stageScale),
+  transform: (shape, node) => computeTextTransform(shape, node as Konva.Text),
 })

@@ -20,12 +20,19 @@ export function StarShape({ shape, isSelected, onSelect, shapeRef }: StarShapePr
   const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2
   const outerR = Math.min(maxX - minX, maxY - minY) / 2
   const innerR = outerR * 0.382
-  const verts: number[] = []
+  const rawVerts: number[] = []
   for (let i = 0; i < 10; i++) {
     const angle = -Math.PI / 2 + (Math.PI * i) / 5
     const r = i % 2 === 0 ? outerR : innerR
-    verts.push(r * Math.cos(angle), r * Math.sin(angle))
+    rawVerts.push(r * Math.cos(angle), r * Math.sin(angle))
   }
+  let vMinX = Infinity, vMinY = Infinity, vMaxX = -Infinity, vMaxY = -Infinity
+  for (let i = 0; i < rawVerts.length; i += 2) {
+    vMinX = Math.min(vMinX, rawVerts[i]); vMinY = Math.min(vMinY, rawVerts[i + 1])
+    vMaxX = Math.max(vMaxX, rawVerts[i]); vMaxY = Math.max(vMaxY, rawVerts[i + 1])
+  }
+  const vcx = (vMinX + vMaxX) / 2, vcy = (vMinY + vMaxY) / 2
+  const verts = rawVerts.map((v, i) => i % 2 === 0 ? v - vcx : v - vcy)
 
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
     const node = e.target
@@ -75,5 +82,5 @@ shapeRegistry.register({
   category: 'basic',
   renderer: (props) => <StarShape {...props} />,
   updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
-  transform: (shape, node, stageScale) => computePolygonTransform(shape, node as Konva.Line, stageScale),
+  transform: (shape, node) => computePolygonTransform(shape, node as Konva.Line),
 })

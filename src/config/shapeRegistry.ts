@@ -24,7 +24,7 @@ export interface ShapeDefinition {
   renderer: React.FC<ShapeRendererProps>
   updatePoints: (shape: Shape, currentPoint: Point) => number[]
   getTransformerConfig?: (shape: Shape) => TransformerConfig
-  transform?: (shape: Shape, node: Konva.Node, stageScale?: number) => TransformResult
+  transform?: (shape: Shape, node: Konva.Node) => TransformResult
   defaultStyle?: Partial<ShapeStyle>
 }
 

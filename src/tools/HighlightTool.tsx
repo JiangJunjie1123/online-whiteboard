@@ -70,5 +70,5 @@ shapeRegistry.register({
   renderer: (props) => <HighlightShape {...props} />,
   updatePoints: (_shape: Shape, pt: Point) => [_shape.points[0], _shape.points[1], pt.x, pt.y],
   defaultStyle: { fillColor: '#FEF08A', strokeColor: 'transparent', opacity: 0.5 },
-  transform: (shape, node, stageScale) => computeRectTransform(shape, node as Konva.Rect, stageScale),
+  transform: (shape, node) => computeRectTransform(shape, node as Konva.Rect),
 })
