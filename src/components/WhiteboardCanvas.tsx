@@ -9,6 +9,9 @@ import { createShape, updateShapePoints, isClick } from '../tools/ToolManager'
 import { computeTransformedPoints } from '../tools/transformUtils'
 import { exportCanvas } from '../utils/exportCanvas'
 import { GridBackground } from './GridBackground'
+import { getBestEdgeAnchor, isPointInShapeBounds } from '../utils/anchorUtils'
+import { routeOrthogonal } from '../utils/connectorRouter'
+import type { ConnectorExtras } from '../types'
 import { shapeRegistry } from '../config/shapeRegistry'
 import '../tools/registerAll' // side-effect: triggers shapeRegistry.register() for all shapes
 import { getSyncManager } from '../sync/SyncManager'
@@ -141,6 +144,28 @@ export function WhiteboardCanvas() {
 
     useCanvasStore.getState().updateShape(selectedId, updated)
 
+    // 连接器跟随：更新引用此形状的所有连线（动态垂直锚点）
+    const connStore = useCanvasStore.getState()
+    const allShapes = connStore.shapes
+    for (const conn of allShapes) {
+      if (conn.type !== 'connector' || !conn.extras) continue
+      const ext = conn.extras as unknown as ConnectorExtras
+      if (ext.startShapeId !== selectedId && ext.endShapeId !== selectedId) continue
+      const startShape = allShapes.find(s => s.id === ext.startShapeId)
+      const endShape = allShapes.find(s => s.id === ext.endShapeId)
+      if (!startShape || !endShape) continue
+      // 用各端点自身位置选边缘锚点
+      const connPts = conn.points
+      const startRef = { x: connPts[0], y: connPts[1] }
+      const endRef = { x: connPts[connPts.length - 2], y: connPts[connPts.length - 1] }
+      const startBest = getBestEdgeAnchor(startShape, startRef)
+      const endBest = getBestEdgeAnchor(endShape, endRef)
+      const routed = routeOrthogonal(startBest.position, endBest.position, startBest.anchor, endBest.anchor, allShapes, [conn.id, ext.startShapeId, ext.endShapeId])
+      connStore.updateShape(conn.id, { points: routed, extras: { ...conn.extras, startAnchor: startBest.anchor, endAnchor: endBest.anchor } as any } as any)
+      const sm2 = getSyncManager()
+      if (sm2) sm2.send({ type: 'operation', action: 'update', shape: { ...conn, points: routed, extras: { ...conn.extras, startAnchor: startBest.anchor, endAnchor: endBest.anchor } as any } })
+    }
+
     const fullShape = { ...shape, ...updated, style: updated.style ?? shape.style }
     syncSend('update', fullShape)
 
@@ -169,7 +194,7 @@ export function WhiteboardCanvas() {
         'hexagon','octagon','parallelogram','trapezoid','cross','double-arrow','dashed-line','curved-arrow',
         'note-sticky','flow-terminator','document','database','cloud','delay','predefined-process','or-circle',
         'class-box','actor','lifeline','callout','bracket','highlight','cylinder','shield',
-        'gear','block-arrow','table-grid','signal','bent-arrow'
+        'gear','block-arrow','table-grid','signal','bent-arrow','connector'
       ]
       if (!drawingTools.includes(activeTool)) return
 
@@ -250,6 +275,36 @@ export function WhiteboardCanvas() {
         addShape(rightBracket)
         syncSend('draw', leftBracket)
         syncSend('draw', rightBracket)
+      } else if (drawingShape.type === 'connector') {
+        // 连接器：吸附端点至形状边缘锚点（垂直连线）
+        const store = useCanvasStore.getState()
+        const [cx1, cy1, cx2, cy2] = drawingShape.points
+        const startPt = { x: cx1, y: cy1 }
+        const endPt = { x: cx2, y: cy2 }
+        let startShapeId = '', endShapeId = ''
+        let startAnchor = 'center' as import('../types').Anchor, endAnchor = 'center' as import('../types').Anchor
+        let startPos = startPt, endPos = endPt
+
+        for (const s of store.shapes) {
+          if (s.type === 'connector') continue
+          if (isPointInShapeBounds(s, startPt, 24)) {
+            startShapeId = s.id
+            const best = getBestEdgeAnchor(s, startPt)
+            startAnchor = best.anchor; startPos = best.position
+          }
+          if (isPointInShapeBounds(s, endPt, 24)) {
+            endShapeId = s.id
+            const best = getBestEdgeAnchor(s, endPt)
+            endAnchor = best.anchor; endPos = best.position
+          }
+        }
+        const routed = (startShapeId && endShapeId)
+          ? routeOrthogonal(startPos, endPos, startAnchor, endAnchor, store.shapes, [drawingShape.id, startShapeId, endShapeId])
+          : [startPos.x, startPos.y, endPos.x, endPos.y]
+        const connExtras: ConnectorExtras = { startShapeId, endShapeId, startAnchor, endAnchor, arrowEnd: 'triangle', arrowStart: 'none' }
+        const finalShape: Shape = { ...drawingShape, points: routed, extras: connExtras as any }
+        addShape(finalShape)
+        syncSend('draw', finalShape)
       } else {
         addShape(drawingShape)
         syncSend('draw', drawingShape)
@@ -409,6 +464,9 @@ export function WhiteboardCanvas() {
           if (!shape.userId || shape.userId === userId) {
             removeShape(selectedId)
             syncSend('delete', undefined, selectedId)
+            // 级联删除引用此形状的连接线
+            const orphaned = shapes.filter(s => s.type === 'connector' && s.extras && (((s.extras as any).startShapeId === selectedId) || ((s.extras as any).endShapeId === selectedId)))
+            orphaned.forEach(s => { removeShape(s.id); syncSend('delete', undefined, s.id) })
           }
         }
         setSelectedId(null)

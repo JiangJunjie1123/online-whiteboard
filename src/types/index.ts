@@ -14,6 +14,24 @@ export interface Point {
   y: number
 }
 
+// --- Connector / Anchor types ---
+
+export const ANCHORS = [
+  'top', 'bottom', 'left', 'right', 'center',
+  'top-left', 'top-right', 'bottom-left', 'bottom-right',
+] as const
+
+export type Anchor = (typeof ANCHORS)[number]
+
+export interface ConnectorExtras {
+  startShapeId: string
+  endShapeId: string
+  startAnchor: Anchor
+  endAnchor: Anchor
+  arrowEnd?: 'none' | 'triangle'
+  arrowStart?: 'none' | 'triangle'
+}
+
 export interface Shape {
   id: string
   type: string
