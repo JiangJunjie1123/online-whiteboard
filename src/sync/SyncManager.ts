@@ -135,7 +135,9 @@ class SyncManagerClass {
         } else if (msg.action === 'delete' && msg.shapeId) {
           canvasStore.removeShape(msg.shapeId, true)
         } else if (msg.action === 'clear') {
-          canvasStore.setShapes([])
+          // Another user cleared their shapes — request full sync
+          const syncMgr = getSyncManager()
+          if (syncMgr) syncMgr.send({ type: 'request_sync' })
         } else if (msg.action === 'update' && msg.shape) {
           canvasStore.updateShape(msg.shape.id, msg.shape, true)
         }

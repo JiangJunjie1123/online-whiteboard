@@ -44,7 +44,7 @@ export function Sidebar() {
   }
 
   const handleClear = () => {
-    clearCanvas()
+    useCanvasStore.getState().clearCanvas(userId || undefined)
     const sm = getSyncManager()
     if (sm) sm.send({ type: 'operation', action: 'clear' })
   }

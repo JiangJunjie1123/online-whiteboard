@@ -13,7 +13,7 @@ interface CanvasState {
   addShape: (shape: Shape, remote?: boolean) => void
   updateShape: (id: string, partial: Partial<Shape>, remote?: boolean) => void
   removeShape: (id: string, remote?: boolean) => void
-  clearCanvas: (remote?: boolean) => void
+  clearCanvas: (userId?: string) => void
   setViewport: (x: number, y: number, scale: number) => void
   setStageGetter: (getter: () => Konva.Stage | null) => void
   setGridVisible: (visible: boolean) => void
@@ -52,8 +52,12 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     set((s) => ({ shapes: s.shapes.filter((sh) => sh.id !== id) }))
   },
 
-  clearCanvas: (_remote = false) => {
-    set({ shapes: [] })
+  clearCanvas: (userId?: string) => {
+    if (userId) {
+      set((s) => ({ shapes: s.shapes.filter((sh) => sh.userId !== userId) }))
+    } else {
+      set({ shapes: [] })
+    }
   },
 
   undoOwn: (userId) => {

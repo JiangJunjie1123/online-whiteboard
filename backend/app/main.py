@@ -238,7 +238,9 @@ async def handle_operation(ws: WebSocket, data: ClientMessage, conn_id: str):
             }, exclude_conn_id=conn_id)
 
     elif action == "clear":
-        room["shapes"].clear()
+        user_id = conn["userId"]
+        # Only clear shapes owned by this user
+        room["shapes"] = {sid: s for sid, s in room["shapes"].items() if s.userId != user_id}
         await broadcast_to_room(room_id, {
             "type": "operation",
             "action": "clear",
